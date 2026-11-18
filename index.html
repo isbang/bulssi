@@ -135,7 +135,25 @@
   .build { display: flex; flex-wrap: wrap; gap: 6px; }
   .build span { padding: 4px 9px; border-radius: 2px; font-size: 13px; background: var(--night) var(--grain); box-shadow: 2px 2px 0 rgba(3,4,10,.5); }
   .build i { font-style: normal; color: var(--dim); margin-left: 4px; }
-  #pause .info { min-height: 0; margin-top: 16px; }
+  .sheet { padding: 16px 16px 14px; border-radius: 2px; background: var(--paper) var(--grain); color: var(--ink); box-shadow: var(--cut); rotate: -.4deg; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .sheet-head h2 { font-size: 26px; }
+  .sheet-head span, .sheet .stats, .sheet .label { font-size: 12px; color: #5d5a6b; font-variant-numeric: tabular-nums; }
+  .sheet .stats { display: flex; gap: 14px; margin-top: 2px; }
+  .sheet .omen { margin-top: 10px; font-size: 13px; color: #4b4859; }
+  .sheet .omen b { margin-right: 8px; font-family: var(--disp); font-weight: 400; font-size: 17px; color: #b0500f; }
+  .sheet hr { margin: 12px 0 10px; border: 0; border-top: 1px dashed #b3a88e; }
+  .sheet .label { margin: 0 0 6px; }
+  .rows { display: grid; gap: 6px; }
+  .rows.two { grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  .row { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 14px; }
+  .row .seal.art { width: 34px; height: 34px; }
+  .row .nm { flex: 1; min-width: 0; }
+  .pips { display: flex; gap: 3px; flex-shrink: 0; }
+  .pips i { width: 8px; height: 8px; border: 1px solid var(--ink); }
+  .pips i.on { background: var(--ink); }
+  .pips.max i { border-color: #b0500f; background: #b0500f; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   #over .records { margin-top: 22px; }
   .unlock { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--jade); }
 
@@ -178,11 +196,9 @@
 </div>
 
 <div id="pause" class="screen dim top hidden">
-  <h2>잠시 멈춤</h2>
   <div id="pauseBody"></div>
   <button id="resumeBtn" class="btn primary">계속</button>
-  <button id="quitBtn" class="btn">그만두기</button>
-  <button id="pauseSoundBtn" class="link"></button>
+  <div class="pair"><button id="pauseSoundBtn" class="btn"></button><button id="quitBtn" class="btn">그만두기</button></div>
 </div>
 
 <div id="over" class="screen dim hidden">

@@ -190,14 +190,20 @@
   $('rerollBtn').onclick = () => { if (G.reroll(S)) showChoice(); };
 
   function buildHtml() {
-    const chip = (name, extra) => `<span>${name}${extra ? `<i>${extra}</i>` : ''}</span>`;
-    const ws = S.weapons.map(w => chip(G.WEAPONS[w.id].name, w.lvl === 6 ? '각성' : w.lvl)).join('');
-    const ps = S.passives.map(x => chip(G.PASSIVES[x.id].name, x.lvl)).join('');
-    const rs = S.relics.map(id => chip(G.RELICS[id].name)).join('');
-    return `<div class="info"><div><h3>${S.omen.name}</h3><p>${S.omen.desc}</p></div></div>
-      <div class="label">무기</div><div class="build">${ws}</div>
-      ${ps ? `<div class="label">능력</div><div class="build">${ps}</div>` : ''}
-      ${rs ? `<div class="label">유물</div><div class="build">${rs}</div>` : ''}`;
+    const pips = (n, max) => `<span class="pips${n >= max ? ' max' : ''}">${'<i class="on"></i>'.repeat(n)}${'<i></i>'.repeat(max - n)}</span>`;
+    const row = (kind, id, d, tail) => `<div class="row">${seal(d.icon, kind, '', id)}<span class="nm">${d.name}</span>${tail}</div>`;
+    const ws = S.weapons.map(w => row('w', w.id, G.WEAPONS[w.id], pips(w.lvl, 6))).join('');
+    const ps = S.passives.map(x => row('p', x.id, G.PASSIVES[x.id], pips(x.lvl, G.PASSIVES[x.id].max))).join('');
+    const rs = S.relics.map(id => row('r', id, G.RELICS[id], '')).join('');
+    const left = S.finalUp ? '밤의 주인과 대치 중' : `새벽까지 ${fmt(Math.max(0, G.RUN_LEN - S.t))}`;
+    return `<div class="sheet">
+      <div class="sheet-head"><h2>잠시 멈춤</h2><span>${left}</span></div>
+      <p class="stats"><span>레벨 ${S.p.level}</span><span>처치 ${S.kills}</span><span>체력 ${Math.ceil(S.p.hp)}/${S.st.maxHp}</span></p>
+      <p class="omen"><b>${S.omen.name}</b>${S.omen.desc}</p>
+      <hr><div class="label">무기</div><div class="rows">${ws}</div>
+      ${ps ? `<hr><div class="label">능력</div><div class="rows">${ps}</div>` : ''}
+      ${rs ? `<hr><div class="label">유물</div><div class="rows two">${rs}</div>` : ''}
+    </div>`;
   }
 
   function pause() {
