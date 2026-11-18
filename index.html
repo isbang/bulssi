@@ -90,6 +90,16 @@
   .dim { background: rgba(13,16,32,.97); justify-content: center; }
   .dim.top { justify-content: flex-start; }
 
+  /* 시작 화면은 #menu 위에 덮인다. z-index를 빼면 캐릭터 선택 화면이 비쳐 보인다. */
+  #intro { z-index: 5; justify-content: space-between; overflow: hidden; background: var(--ink) url("assets/start.jpg") center 42% / cover no-repeat; }
+  #intro::before { content: ""; position: absolute; inset: 0; max-width: none; background: linear-gradient(rgba(13,16,32,.5), rgba(13,16,32,0) 30%, rgba(13,16,32,0) 62%, rgba(13,16,32,.82)); pointer-events: none; }
+  #intro > * { position: relative; }
+  #intro header { margin-top: 6vh; text-align: center; }
+  #intro header img { width: min(60vw, 230px); height: auto; filter: drop-shadow(3px 4px 0 rgba(3,4,10,.55)); }
+  #intro header p { margin-top: 12px; color: var(--paper); text-shadow: 0 2px 6px rgba(3,4,10,.9); }
+  #intro footer { margin-bottom: 4vh; text-align: center; }
+  #intro footer .btn { width: 100%; }
+  #intro footer p { margin-top: 14px; font-size: 13px; color: var(--dim); }
   .title { margin-top: 5vh; }
   h1 { line-height: 0; }
   h1 img { width: min(54vw, 200px); height: auto; filter: drop-shadow(3px 4px 0 rgba(3,4,10,.55)); }
@@ -199,6 +209,17 @@
   <dl id="records" class="records"></dl>
   <p class="help">누른 채 끌면 움직인다. 공격은 저절로 나간다.</p>
   <button id="soundBtn" class="link"></button>
+</div>
+
+<div id="intro" class="screen">
+  <header>
+    <img src="assets/logo.png" alt="불씨">
+    <p>밤은 길고, 불은 작다.</p>
+  </header>
+  <footer>
+    <button id="introBtn" class="btn primary">게임 시작하기</button>
+    <p>긴 밤을 버텨 새벽을 맞이하세요</p>
+  </footer>
 </div>
 
 <div id="choice" class="screen dim hidden">

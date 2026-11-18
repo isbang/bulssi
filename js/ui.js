@@ -146,6 +146,8 @@
     toast(`<small>오늘 밤의 징조</small><b>${S.omen.name}</b>${S.omen.desc}`, 5);
   }
   $('startBtn').onclick = startRun;
+  $('introBtn').onclick = () => { initAudio(); show('intro', false); };
+  if (BOT) show('intro', false);
   $('retryBtn').onclick = startRun;
   $('menuBtn').onclick = toMenu;
 
