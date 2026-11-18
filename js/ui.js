@@ -90,7 +90,8 @@
 
   function readInput() {
     const j = V.joy;
-    if (j) return { x: (j.x - j.ox) / 48, y: (j.y - j.oy) / 48 };
+    if (j) { if (Math.abs(j.x - j.ox) > 6) V.faceLeft = j.x < j.ox; return { x: (j.x - j.ox) / 48, y: (j.y - j.oy) / 48 }; }
+    if (keys.KeyA || keys.ArrowLeft) V.faceLeft = true; else if (keys.KeyD || keys.ArrowRight) V.faceLeft = false;
     return {
       x: (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0),
       y: (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0),
@@ -104,14 +105,14 @@
     for (const c of G.CHARS) {
       const b = document.createElement('button'), ok = unlocked(c);
       b.className = 'char' + (c.id === save.char ? ' sel' : '') + (ok ? '' : ' locked');
-      b.innerHTML = seal(c.icon, 'c') + c.name;
+      b.innerHTML = `<img src="assets/chars/${c.id}.png" alt="">${c.name}`;
       b.onclick = () => { save.char = c.id; renderMenu(); };
       box.appendChild(b);
     }
     const c = G.CHARS.find(x => x.id === save.char) || G.CHARS[0], ok = unlocked(c), w = G.WEAPONS[c.weapon];
     $('charInfo').innerHTML = ok
-      ? `<h3>${c.name}</h3><p>${c.desc}</p><p class="wp">${seal(w.icon, 'w', 'sm')}<span><b>${w.name}</b>${w.desc}</span></p>`
-      : `<h3>${c.name}</h3><p>아직 잠겨 있다. ${c.unlock.text}.</p>`;
+      ? `<img src="assets/chars/${c.id}.png" alt=""><div><h3>${c.name}</h3><p>${c.desc}</p><p class="wp">${seal(w.icon, 'w', 'sm')}<span><b>${w.name}</b>${w.desc}</span></p></div>`
+      : `<img class="locked" src="assets/chars/${c.id}.png" alt=""><div><h3>${c.name}</h3><p>아직 잠겨 있다. ${c.unlock.text}.</p></div>`;
     $('startBtn').disabled = !ok;
     show('depthRow', save.maxDepth > 0);
     save.depth = Math.min(save.depth, save.maxDepth);
@@ -190,7 +191,7 @@
     const ws = S.weapons.map(w => chip(G.WEAPONS[w.id].name, w.lvl === 6 ? '각성' : w.lvl)).join('');
     const ps = S.passives.map(x => chip(G.PASSIVES[x.id].name, x.lvl)).join('');
     const rs = S.relics.map(id => chip(G.RELICS[id].name)).join('');
-    return `<div class="info"><h3>${S.omen.name}</h3><p>${S.omen.desc}</p></div>
+    return `<div class="info"><div><h3>${S.omen.name}</h3><p>${S.omen.desc}</p></div></div>
       <div class="label">무기</div><div class="build">${ws}</div>
       ${ps ? `<div class="label">능력</div><div class="build">${ps}</div>` : ''}
       ${rs ? `<div class="label">유물</div><div class="build">${rs}</div>` : ''}`;

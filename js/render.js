@@ -44,6 +44,55 @@
     return (h ^ (h >>> 16)) >>> 0;
   }
 
+  // ── 종이 오리기 스프라이트 ──
+  const SPR = {};
+  function tinted(img, color) {
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const x = c.getContext('2d');
+    x.drawImage(img, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = color; x.fillRect(0, 0, c.width, c.height);
+    return c;
+  }
+  function spr(name) {
+    let s = SPR[name];
+    if (!s) {
+      s = SPR[name] = { ok: false, tints: {} };
+      const img = new Image();
+      img.onload = () => { s.img = img; s.ok = true; };
+      img.src = 'assets/' + name + '.png';
+    }
+    return s.ok ? s : null;
+  }
+  const tintOf = (s, color) => s.tints[color] || (s.tints[color] = tinted(s.img, color));
+
+  // 그림자를 종이 한 겹 아래에 어긋나게 깔아 오려 붙인 느낌을 낸다.
+  function paper(ctx, s, x, y, size, rot, flip, opt) {
+    const h = size / 2;
+    ctx.save(); ctx.translate(x, y);
+    if (rot) ctx.rotate(rot);
+    if (flip) ctx.scale(-1, 1);
+    ctx.globalAlpha = .45; ctx.drawImage(tintOf(s, '#04050c'), -h + (flip ? -2 : 2), -h + 3, size, size);
+    ctx.globalAlpha = 1;
+    if (opt && opt.rim) { const k = size * 1.16; ctx.drawImage(tintOf(s, opt.rim), -k / 2, -k / 2, k, k); }
+    ctx.drawImage(opt && opt.flash ? tintOf(s, '#ffffff') : s.img, -h, -h, size, size);
+    if (opt && opt.ice) { ctx.globalAlpha = .45; ctx.drawImage(tintOf(s, '#9fd8ff'), -h, -h, size, size); ctx.globalAlpha = 1; }
+    ctx.restore();
+  }
+
+  let grain = null;
+  function grainPattern(ctx) {
+    if (grain) return grain;
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const x = c.getContext('2d');
+    for (let i = 0; i < 1400; i++) {
+      const h = hash(i, 31);
+      x.fillStyle = h & 1 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.09)';
+      x.fillRect(h >> 3 & 127, h >> 11 & 127, 1 + (h >> 20 & 1), 1);
+    }
+    return (grain = ctx.createPattern(c, 'repeat'));
+  }
+
   function ground(ctx, cx, cy, hw, hh) {
     const T = 90, x0 = Math.floor((cx - hw) / T), x1 = Math.floor((cx + hw) / T), y0 = Math.floor((cy - hh) / T), y1 = Math.floor((cy + hh) / T);
     ctx.fillStyle = '#161c40';
@@ -139,7 +188,7 @@
   }
 
   function enemies(ctx, S, cx, cy, hw, hh, time) {
-    const p = S.p, groups = {}, vis = [];
+    const p = S.p, groups = {}, vis = [], cut = [];
     for (const e of S.enemies) {
       const m = e.r * 2.4;
       if (Math.abs(e.x - cx) > hw + m || Math.abs(e.y - cy) > hh + m) continue;
@@ -148,15 +197,27 @@
       if (e.type === 'swarm') { const v = Math.hypot(e.vx, e.vy) || 1; e.ux = e.vx / v; e.uy = e.vy / v; }
       else if ((e.type === 'charger' || e.boss === 'maw') && e.st > 0) { e.ux = e.dx; e.uy = e.dy; }
       else { e.ux = e.lx; e.uy = e.ly; }
+      e.spr = spr('enemies/' + e.type);
+      if (e.spr) { cut.push(e); continue; }
       vis.push(e);
       (groups[e.type] || (groups[e.type] = [])).push(e);
     }
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (const e of vis) {
+    for (const e of S.enemies) {
       if (!((e.type === 'charger' || e.boss === 'maw') && e.st === 1)) continue;
       const len = e.boss ? 340 : 190;
       ctx.strokeStyle = 'rgba(226,96,122,.35)'; ctx.lineWidth = e.r * 1.6;
       ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + e.dx * len, e.y + e.dy * len); ctx.stroke();
+    }
+    const ice = S.freeze > 0;
+    for (const e of cut) {
+      const dash = (e.type === 'charger' || e.boss === 'maw') && e.st === 2;
+      const rot = e.type === 'swarm' ? Math.sin(time * 18 + e.id) * .25 : dash ? e.ux * .35 : Math.sin(time * 4 + e.id) * .09;
+      paper(ctx, e.spr, e.x, e.y, e.r * (e.boss ? 2.9 : 3.5), rot, (e.type === 'swarm' ? e.ux : e.lx) < 0, { rim: e.boss ? '#e2607a' : e.elite ? '#e3ba52' : null, flash: e.flash > 0, ice });
+      if (e.elite) {
+        ctx.fillStyle = '#0d1020'; ctx.fillRect(e.x - 16, e.y - e.r * 1.7 - 9, 32, 4);
+        ctx.fillStyle = '#e3ba52'; ctx.fillRect(e.x - 16, e.y - e.r * 1.7 - 9, 32 * Math.max(0, e.hp / e.maxHp), 4);
+      }
     }
     if (groups.wisp) {
       ctx.globalCompositeOperation = 'lighter';
@@ -329,12 +390,13 @@
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
 
-  function indicator(ctx, V, sx, sy, glyph, color) {
+  function indicator(ctx, V, sx, sy, glyph, color, name) {
     const m = 26, top = 92;
     if (sx > m && sx < V.w - m && sy > top && sy < V.h - m) return;
     const x = Math.max(m, Math.min(V.w - m, sx)), y = Math.max(top, Math.min(V.h - m, sy));
     ctx.fillStyle = '#0d1020'; ctx.fillRect(x - 15, y - 15, 30, 30);
-    if (glyph) seal(ctx, x, y, 24, glyph, color); else pickup(ctx, 'chest', x, y);
+    const is = spr(name);
+    if (is) ctx.drawImage(is.img, x - 12, y - 12, 24, 24); else if (glyph) seal(ctx, x, y, 24, glyph, color); else pickup(ctx, 'chest', x, y);
     ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.strokeRect(x - 14.5, y - 14.5, 29, 29);
   }
 
@@ -351,6 +413,7 @@
     ctx.save();
     ctx.translate(V.w / 2, V.h / 2); ctx.scale(sc, sc); ctx.translate(-cx, -cy);
     ground(ctx, cx, cy, hw, hh);
+    ctx.fillStyle = grainPattern(ctx); ctx.fillRect(cx - hw - 2, cy - hh - 2, hw * 2 + 4, hh * 2 + 4);
 
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const s of S.shrines) {
@@ -360,7 +423,8 @@
       ctx.strokeStyle = d.color; ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
       ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
       if (s.charge > 0) { ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, -TAU / 4, -TAU / 4 + TAU * s.charge / 2.2); ctx.stroke(); }
-      seal(ctx, s.x, s.y, 26, d.icon, d.color);
+      const ss = spr('items/shrine-' + s.k);
+      if (ss) paper(ctx, ss, s.x, s.y + Math.sin(time * 2 + s.x) * 2, 46, 0, false); else seal(ctx, s.x, s.y, 26, d.icon, d.color);
       ctx.font = '11px ' + BODY; ctx.fillStyle = d.color; ctx.fillText(d.name, s.x, s.y + s.r + 12);
       ctx.globalAlpha = 1;
     }
@@ -381,7 +445,8 @@
       const bob = Math.sin(time * 4 + k.x) * 3;
       ctx.globalCompositeOperation = 'lighter'; glow(ctx, k.k === 'chest' ? '#e3ba52' : k.k === 'heal' ? '#e2607a' : '#6cb6e6', k.x, k.y, 24, .5);
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-      pickup(ctx, k.k, k.x, k.y + bob);
+      const ks = spr('items/' + k.k);
+      if (ks) paper(ctx, ks, k.x, k.y + bob, 30, Math.sin(time * 3 + k.x) * .12, false); else pickup(ctx, k.k, k.x, k.y + bob);
     }
 
     enemies(ctx, S, cx, cy, hw, hh, time);
@@ -389,19 +454,27 @@
     ctx.globalCompositeOperation = 'lighter';
     for (const s of S.shots) glow(ctx, s.k === 'spark' ? '#ff9a3c' : '#5a86c8', s.x, s.y, s.k === 'spark' ? 15 : s.r * 2, .9);
     for (const w of S.weapons) for (let i = 0; i < w.orbs.length; i += 2) glow(ctx, '#ffd27a', w.orbs[i], w.orbs[i + 1], 22 * S.st.area, 1);
-    glow(ctx, look.glow, p.x, p.y, 52 + Math.sin(time * 7) * 4, .6);
+    glow(ctx, look.glow, p.x, p.y, 58 + Math.sin(time * 7) * 4, .45);
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
 
     for (const s of S.shots) {
       if (s.k === 'spark') { ctx.fillStyle = '#fff3c4'; ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, TAU); ctx.fill(); }
       else { ctx.strokeStyle = '#eaf3ff'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * .8, s.spin, s.spin + 3.4); ctx.stroke(); }
     }
+    const lantern = spr('items/lantern');
     ctx.fillStyle = '#fff3c4';
-    for (const w of S.weapons) for (let i = 0; i < w.orbs.length; i += 2) { ctx.beginPath(); ctx.arc(w.orbs[i], w.orbs[i + 1], 5 * S.st.area, 0, TAU); ctx.fill(); }
+    for (const w of S.weapons) for (let i = 0; i < w.orbs.length; i += 2) {
+      if (lantern) paper(ctx, lantern, w.orbs[i], w.orbs[i + 1], 24 * S.st.area, Math.sin(time * 6 + i) * .2, false);
+      else { ctx.beginPath(); ctx.arc(w.orbs[i], w.orbs[i + 1], 5 * S.st.area, 0, TAU); ctx.fill(); }
+    }
 
-    if (p.iframes <= 0 || Math.floor(time * 20) % 2) look.draw(ctx, p.x, p.y, time);
-    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(p.x - 18, p.y + 16, 36, 5);
-    ctx.fillStyle = p.hp / S.st.maxHp < .3 ? '#ff4a4a' : '#6fe07a'; ctx.fillRect(p.x - 17, p.y + 17, 34 * Math.max(0, p.hp / S.st.maxHp), 3);
+    if (p.iframes <= 0 || Math.floor(time * 20) % 2) {
+      const ps = spr('chars/' + S.char.id);
+      if (ps) paper(ctx, ps, p.x, p.y - 4 + (p.moving ? Math.abs(Math.sin(time * 11)) * -3 : 0), 38, p.moving ? Math.sin(time * 11) * .1 : Math.sin(time * 3) * .04, V.faceLeft);
+      else look.draw(ctx, p.x, p.y, time);
+    }
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(p.x - 18, p.y + 20, 36, 5);
+    ctx.fillStyle = p.hp / S.st.maxHp < .3 ? '#ff4a4a' : '#6fe07a'; ctx.fillRect(p.x - 17, p.y + 21, 34 * Math.max(0, p.hp / S.st.maxHp), 3);
 
     for (const b of S.bullets) {
       ctx.globalCompositeOperation = 'lighter'; glow(ctx, '#ff3a6a', b.x, b.y, 16, .9);
@@ -431,8 +504,8 @@
     if (S.hurtFlash > 0) { ctx.fillStyle = `rgba(255,40,40,${S.hurtFlash * .5})`; ctx.fillRect(0, 0, V.w, V.h); }
 
     const toScreen = (x, y) => [V.w / 2 + (x - cx) * sc, V.h / 2 + (y - cy) * sc];
-    for (const s of S.shrines) { const [x, y] = toScreen(s.x, s.y); indicator(ctx, V, x, y, G.SHRINES[s.k].icon, G.SHRINES[s.k].color); }
-    for (const k of S.pickups) if (k.k === 'chest') { const [x, y] = toScreen(k.x, k.y); indicator(ctx, V, x, y, null, '#e3ba52'); }
+    for (const s of S.shrines) { const [x, y] = toScreen(s.x, s.y); indicator(ctx, V, x, y, G.SHRINES[s.k].icon, G.SHRINES[s.k].color, 'items/shrine-' + s.k); }
+    for (const k of S.pickups) if (k.k === 'chest') { const [x, y] = toScreen(k.x, k.y); indicator(ctx, V, x, y, null, '#e3ba52', 'items/chest'); }
 
     const j = V.joy;
     if (j) {
