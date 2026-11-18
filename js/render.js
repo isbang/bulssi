@@ -340,54 +340,137 @@
     },
   };
 
-  function zones(ctx, S, time) {
-    for (const z of S.zones) {
-      if (z.k === 'mine') {
-        ctx.globalCompositeOperation = 'lighter';
-        glow(ctx, '#ff7a2a', z.x, z.y, 14 + Math.sin(time * 10) * 3, .9);
-        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-        ctx.fillStyle = '#ffd9a0'; ctx.beginPath(); ctx.arc(z.x, z.y, 3, 0, TAU); ctx.fill();
-      } else if (z.k === 'fire') {
-        ctx.globalAlpha = .22 + Math.sin(time * 14 + z.x) * .06;
-        ctx.fillStyle = '#ff7a2a'; ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, TAU); ctx.fill();
+  // ── 종이 오리기 이펙트 ──
+  const INK = '#04050c', CREAM = '#f3ecd2', EMBER = '#f08a2e', GOLD = '#e3ba52', ROSE = '#e2607a', SKY = '#6cb6e6';
+
+  function starPath(ctx, x, y, ro, ri, n, rot) {
+    for (let i = 0; i < n * 2; i++) {
+      const a = rot + i * Math.PI / n, r = i % 2 ? ri : ro, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+      if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+    }
+    ctx.closePath();
+  }
+  // pts 는 (앞, 옆) 픽셀 좌표쌍
+  function orient(ctx, x, y, ux, uy, pts) {
+    for (let i = 0; i < pts.length; i += 2) {
+      const px = x + ux * pts[i] - uy * pts[i + 1], py = y + uy * pts[i] + ux * pts[i + 1];
+      if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+    }
+    ctx.closePath();
+  }
+  // 종이 조각 하나: 어긋난 그림자를 먼저 깔고 그 위에 색 조각을 올린다.
+  function piece(ctx, color, draw, alpha) {
+    const a = alpha == null ? 1 : alpha;
+    ctx.globalAlpha = a * .45; ctx.fillStyle = INK;
+    ctx.translate(2, 3); ctx.beginPath(); draw(); ctx.fill('evenodd'); ctx.translate(-2, -3);
+    ctx.globalAlpha = a; ctx.fillStyle = color;
+    ctx.beginPath(); draw(); ctx.fill('evenodd');
+  }
+  const flat = (ctx, color, draw) => { ctx.fillStyle = color; ctx.beginPath(); draw(); ctx.fill(); };
+
+  function shots(ctx, S) {
+    for (const s of S.shots) {
+      if (s.k === 'spark') {
+        const v = Math.hypot(s.vx, s.vy) || 1, ux = s.vx / v, uy = s.vy / v;
         ctx.globalAlpha = 1;
-      } else if (z.T) {
-        const k = 1 - Math.max(0, z.delay) / z.T, col = z.pd ? '255,80,70' : '255,200,120';
-        ctx.fillStyle = `rgba(${col},${z.pd ? .2 : .12})`; ctx.beginPath(); ctx.arc(z.x, z.y, z.r * k, 0, TAU); ctx.fill();
-        ctx.strokeStyle = `rgba(${col},.7)`; ctx.lineWidth = z.pd ? 2 : 1;
-        ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, TAU); ctx.stroke();
-        const h = (1 - k) * 260;
-        ctx.strokeStyle = `rgba(${col},.9)`; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.moveTo(z.x + h * .3, z.y - h); ctx.lineTo(z.x + h * .3 + 6, z.y - h - 20); ctx.stroke();
+        flat(ctx, GOLD, () => { orient(ctx, s.x - ux * 14, s.y - uy * 14, ux, uy, [4, 0, 0, 2.6, -5, 0, 0, -2.6]); orient(ctx, s.x - ux * 23, s.y - uy * 23, ux, uy, [2.6, 0, 0, 1.7, -3.4, 0, 0, -1.7]); });
+        piece(ctx, EMBER, () => orient(ctx, s.x, s.y, ux, uy, [11, 0, 1, 5.5, -9, 0, 1, -5.5]));
+        flat(ctx, CREAM, () => orient(ctx, s.x, s.y, ux, uy, [7, 0, 1, 2.6, -3, 0, 1, -2.6]));
+      } else {
+        const r = s.r, ox = Math.cos(s.spin) * r * .25, oy = Math.sin(s.spin) * r * .25;
+        piece(ctx, CREAM, () => { ctx.moveTo(s.x + r, s.y); ctx.arc(s.x, s.y, r, 0, TAU); ctx.moveTo(s.x + ox + r * .75, s.y + oy); ctx.arc(s.x + ox, s.y + oy, r * .75, 0, TAU); });
+        flat(ctx, '#74c7a4', () => { const a = s.spin + Math.PI; ctx.arc(s.x + Math.cos(a) * r * .78, s.y + Math.sin(a) * r * .78, r * .13, 0, TAU); });
       }
     }
+    ctx.globalAlpha = 1;
+  }
+
+  function bullets(ctx, S, time) {
+    for (const b of S.bullets) piece(ctx, ROSE, () => starPath(ctx, b.x, b.y, 8.5, 3.6, 4, time * 5 + b.x * .05));
+    ctx.fillStyle = CREAM; ctx.beginPath();
+    for (const b of S.bullets) { ctx.moveTo(b.x + 2.4, b.y); ctx.arc(b.x, b.y, 2.4, 0, TAU); }
+    ctx.fill();
+  }
+
+  function zones(ctx, S, time) {
+    for (const z of S.zones) {
+      ctx.globalAlpha = 1;
+      if (z.k === 'mine') {
+        const fl = Math.sin(time * 14 + z.x) * 1.5;
+        flat(ctx, GOLD, () => { ctx.moveTo(z.x - 3.5, z.y - 4); ctx.lineTo(z.x + Math.sin(time * 6 + z.y) * 2, z.y - 14 - fl); ctx.lineTo(z.x + 3.5, z.y - 4); });
+        piece(ctx, EMBER, () => starPath(ctx, z.x, z.y, 7.5, 6.2, 7, z.x));
+        flat(ctx, CREAM, () => ctx.arc(z.x, z.y, 2.6, 0, TAU));
+      } else if (z.k === 'fire') {
+        ctx.globalAlpha = .22; flat(ctx, EMBER, () => ctx.arc(z.x, z.y, z.r, 0, TAU));
+        ctx.globalAlpha = Math.min(1, z.dur / .5) * .9;
+        const n = Math.max(6, Math.round(z.r / 7));
+        flat(ctx, EMBER, () => {
+          for (let i = 0; i < n; i++) {
+            const a = i / n * TAU + z.x, rr = z.r * (i % 2 ? .78 : .42), fx = z.x + Math.cos(a) * rr, fy = z.y + Math.sin(a) * rr * .9;
+            const h = 9 + Math.sin(time * 11 + i * 2.1) * 4;
+            ctx.moveTo(fx - 4, fy + 3); ctx.lineTo(fx + Math.sin(time * 7 + i) * 2, fy - h); ctx.lineTo(fx + 4, fy + 3);
+          }
+        });
+        flat(ctx, GOLD, () => {
+          for (let i = 0; i < n; i += 2) {
+            const a = i / n * TAU + z.x, rr = z.r * .42, fx = z.x + Math.cos(a) * rr, fy = z.y + Math.sin(a) * rr * .9;
+            ctx.moveTo(fx - 2, fy + 3); ctx.lineTo(fx, fy - 4 - Math.sin(time * 11 + i * 2.1) * 2); ctx.lineTo(fx + 2, fy + 3);
+          }
+        });
+      } else if (z.T) {
+        const k = 1 - Math.max(0, z.delay) / z.T, col = z.pd ? ROSE : CREAM;
+        ctx.globalAlpha = z.pd ? .2 : .1; flat(ctx, col, () => ctx.arc(z.x, z.y, z.r * k, 0, TAU));
+        ctx.globalAlpha = .85; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash([7, 6]); ctx.lineDashOffset = -time * 24;
+        ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        const h = (1 - k) * 300, sx = z.x + h * .35, sy = z.y - h, ux = -.33, uy = .944;
+        ctx.globalAlpha = 1;
+        flat(ctx, EMBER, () => orient(ctx, sx, sy, ux, uy, [0, 7, -34, 0, 0, -7]));
+        flat(ctx, GOLD, () => orient(ctx, sx, sy, ux, uy, [0, 4, -20, 0, 0, -4]));
+        piece(ctx, z.pd ? ROSE : CREAM, () => starPath(ctx, sx, sy, 11, 4.8, 5, time * 4));
+      }
+    }
+    ctx.globalAlpha = 1;
   }
 
   function effects(ctx, S) {
-    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineJoin = 'miter'; ctx.lineCap = 'butt'; ctx.miterLimit = 6;
     for (const f of S.fx) {
-      const k = f.t / f.d;
-      ctx.globalAlpha = 1 - k;
-      if (f.k === 'p') { ctx.fillStyle = f.color; ctx.fillRect(f.x - 1.5, f.y - 1.5, 3, 3); }
-      else if (f.k === 'ring') {
-        const r = f.r * (.35 + .65 * Math.sqrt(k));
-        if (f.fill) { ctx.globalAlpha = (1 - k) * .35; ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, TAU); ctx.fill(); ctx.globalAlpha = 1 - k; }
-        ctx.strokeStyle = f.color; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, TAU); ctx.stroke();
+      const k = f.t / f.d, fade = k < .6 ? 1 : (1 - k) / .4;
+      if (f.k === 'p') {
+        const a = f.vx * .05 + f.t * 12, x = f.x, y = f.y + 90 * f.t * f.t;
+        ctx.globalAlpha = fade; ctx.fillStyle = f.color;
+        ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 4, y + Math.sin(a) * 4); ctx.lineTo(x + Math.cos(a + 2.2) * 3.4, y + Math.sin(a + 2.2) * 3.4); ctx.lineTo(x + Math.cos(a + 4.1) * 3.4, y + Math.sin(a + 4.1) * 3.4); ctx.fill();
+      } else if (f.k === 'ring' && f.fill) {
+        // 폭발: 톱니 별 세 겹이 튀어나왔다가 사라진다.
+        const e = 1 - Math.pow(1 - Math.min(1, k / .4), 3), R = f.r * (.3 + .7 * e), rot = (hash(f.x | 0, f.y | 0) & 63) / 10, n = R > 55 ? 12 : 9;
+        piece(ctx, f.color === '#ffb347' ? EMBER : f.color, () => starPath(ctx, f.x, f.y, R, R * .7, n, rot), fade);
+        flat(ctx, GOLD, () => starPath(ctx, f.x, f.y, R * .68, R * .44, n, rot + .35));
+        flat(ctx, CREAM, () => starPath(ctx, f.x, f.y, R * .38, R * .2, n, rot));
+      } else if (f.k === 'ring') {
+        // 퍼지는 고리: 바깥이 톱니인 띠
+        const R = f.r * (.3 + .7 * Math.sqrt(k)), n = Math.max(14, Math.round(R / 5));
+        piece(ctx, f.color === '#ff9a3c' ? EMBER : f.color, () => { starPath(ctx, f.x, f.y, R, R * .9, n, k * 2); ctx.moveTo(f.x + R * .8, f.y); ctx.arc(f.x, f.y, R * .8, 0, TAU); }, fade);
+        ctx.strokeStyle = CREAM; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, R * .74, 0, TAU); ctx.stroke();
       } else if (f.k === 'beam') {
-        ctx.strokeStyle = '#fff0b0'; ctx.lineWidth = f.w * (1 - k * .6); ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x2, f.y2); ctx.stroke();
+        const dx = f.x2 - f.x, dy = f.y2 - f.y, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len, w = f.w * (1 - k * .7);
+        piece(ctx, EMBER, () => orient(ctx, f.x, f.y, ux, uy, [6, w * .85, len, w * .28, len + 10, 0, len, -w * .28, 6, -w * .85, 0, 0]), fade);
+        flat(ctx, CREAM, () => orient(ctx, f.x, f.y, ux, uy, [10, w * .5, len - 4, w * .12, len - 4, -w * .12, 10, -w * .5]));
       } else {
-        ctx.strokeStyle = '#b8e4ff'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
-        ctx.beginPath(); ctx.moveTo(f.pts[0], f.pts[1]);
-        for (let i = 2; i < f.pts.length; i += 2) {
-          const mx = (f.pts[i - 2] + f.pts[i]) / 2 + ((hash(i, f.pts[i] | 0) & 31) - 16), my = (f.pts[i - 1] + f.pts[i + 1]) / 2 + ((hash(f.pts[i + 1] | 0, i) & 31) - 16);
-          ctx.lineTo(mx, my); ctx.lineTo(f.pts[i], f.pts[i + 1]);
-        }
-        ctx.stroke();
+        const zig = () => {
+          ctx.moveTo(f.pts[0], f.pts[1]);
+          for (let i = 2; i < f.pts.length; i += 2) {
+            const mx = (f.pts[i - 2] + f.pts[i]) / 2 + ((hash(i, f.pts[i] | 0) & 31) - 16), my = (f.pts[i - 1] + f.pts[i + 1]) / 2 + ((hash(f.pts[i + 1] | 0, i) & 31) - 16);
+            ctx.lineTo(mx, my); ctx.lineTo(f.pts[i], f.pts[i + 1]);
+          }
+        };
+        ctx.globalAlpha = fade * .45; ctx.strokeStyle = INK; ctx.lineWidth = 8;
+        ctx.translate(2, 3); ctx.beginPath(); zig(); ctx.stroke(); ctx.translate(-2, -3);
+        ctx.globalAlpha = fade; ctx.strokeStyle = SKY; ctx.beginPath(); zig(); ctx.stroke();
+        ctx.strokeStyle = CREAM; ctx.lineWidth = 3.2; ctx.beginPath(); zig(); ctx.stroke();
+        flat(ctx, CREAM, () => { for (let i = 2; i < f.pts.length; i += 2) starPath(ctx, f.pts[i], f.pts[i + 1], 8, 2.6, 4, i); });
       }
     }
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
   }
 
   function indicator(ctx, V, sx, sy, glyph, color, name) {
@@ -431,13 +514,13 @@
 
     zones(ctx, S, time);
 
-    for (const tier of [[0, 3, '#5ad0ff', 3.2], [3, 10, '#7dffa0', 4.4], [10, 1e9, '#ffd75a', 6]]) {
+    for (const tier of [[0, 3, SKY, 3.4], [3, 10, '#74c7a4', 4.6], [10, 1e9, GOLD, 6.2]]) {
+      const r = tier[3], on = g => g.v >= tier[0] && g.v < tier[1] && Math.abs(g.x - cx) < hw + 8 && Math.abs(g.y - cy) < hh + 8;
       ctx.fillStyle = tier[2]; ctx.beginPath();
-      const r = tier[3];
-      for (const g of S.gems) {
-        if (g.v < tier[0] || g.v >= tier[1] || Math.abs(g.x - cx) > hw + 8 || Math.abs(g.y - cy) > hh + 8) continue;
-        ctx.moveTo(g.x, g.y - r); ctx.lineTo(g.x + r * .75, g.y); ctx.lineTo(g.x, g.y + r); ctx.lineTo(g.x - r * .75, g.y);
-      }
+      for (const g of S.gems) if (on(g)) { ctx.moveTo(g.x, g.y - r); ctx.lineTo(g.x + r * .75, g.y); ctx.lineTo(g.x, g.y + r); ctx.lineTo(g.x - r * .75, g.y); }
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.38)'; ctx.beginPath();
+      for (const g of S.gems) if (on(g)) { ctx.moveTo(g.x, g.y - r); ctx.lineTo(g.x - r * .75, g.y); ctx.lineTo(g.x, g.y + r); }
       ctx.fill();
     }
 
@@ -452,15 +535,10 @@
     enemies(ctx, S, cx, cy, hw, hh, time);
 
     ctx.globalCompositeOperation = 'lighter';
-    for (const s of S.shots) glow(ctx, s.k === 'spark' ? '#ff9a3c' : '#5a86c8', s.x, s.y, s.k === 'spark' ? 15 : s.r * 2, .9);
-    for (const w of S.weapons) for (let i = 0; i < w.orbs.length; i += 2) glow(ctx, '#ffd27a', w.orbs[i], w.orbs[i + 1], 22 * S.st.area, 1);
     glow(ctx, look.glow, p.x, p.y, 58 + Math.sin(time * 7) * 4, .45);
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
 
-    for (const s of S.shots) {
-      if (s.k === 'spark') { ctx.fillStyle = '#fff3c4'; ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, TAU); ctx.fill(); }
-      else { ctx.strokeStyle = '#eaf3ff'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r * .8, s.spin, s.spin + 3.4); ctx.stroke(); }
-    }
+    shots(ctx, S);
     const lantern = spr('items/lantern');
     ctx.fillStyle = '#fff3c4';
     for (const w of S.weapons) for (let i = 0; i < w.orbs.length; i += 2) {
@@ -476,13 +554,7 @@
     ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(p.x - 18, p.y + 20, 36, 5);
     ctx.fillStyle = p.hp / S.st.maxHp < .3 ? '#ff4a4a' : '#6fe07a'; ctx.fillRect(p.x - 17, p.y + 21, 34 * Math.max(0, p.hp / S.st.maxHp), 3);
 
-    for (const b of S.bullets) {
-      ctx.globalCompositeOperation = 'lighter'; glow(ctx, '#ff3a6a', b.x, b.y, 16, .9);
-      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-    }
-    ctx.fillStyle = '#ffd0dc'; ctx.beginPath();
-    for (const b of S.bullets) { ctx.moveTo(b.x + 4.5, b.y); ctx.arc(b.x, b.y, 4.5, 0, TAU); }
-    ctx.fill();
+    bullets(ctx, S, time);
 
     effects(ctx, S);
 
