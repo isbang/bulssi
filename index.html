@@ -91,8 +91,8 @@
   .dim.top { justify-content: flex-start; }
 
   .title { margin-top: 5vh; }
-  h1 { font-family: var(--disp); font-weight: 400; font-size: 88px; line-height: 1; letter-spacing: -2px; }
-  h1::after { content: ""; display: inline-block; width: 16px; height: 16px; margin-left: 8px; background: var(--ember); rotate: 8deg; box-shadow: 2px 3px 0 rgba(3,4,10,.55); }
+  h1 { line-height: 0; }
+  h1 img { width: min(54vw, 200px); height: auto; filter: drop-shadow(3px 4px 0 rgba(3,4,10,.55)); }
   .title p { margin-top: 10px; color: var(--dim); }
   h2 { font-family: var(--disp); font-weight: 400; font-size: 32px; line-height: 1.2; }
   h2 + p { margin-top: 4px; color: var(--dim); font-size: 14px; }
@@ -189,7 +189,7 @@
 
 <div id="menu" class="screen">
   <header class="title">
-    <h1>불씨</h1>
+    <h1><img src="assets/logo.png" alt="불씨"></h1>
     <p>밤은 길고, 불은 작다.</p>
   </header>
   <div id="chars" class="chars"></div>
