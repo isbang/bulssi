@@ -368,8 +368,25 @@
   }
   const flat = (ctx, color, draw) => { ctx.fillStyle = color; ctx.beginPath(); draw(); ctx.fill(); };
 
+  function img(ctx, s, x, y, w, h, rot, ax, ay) {
+    ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot);
+    ctx.drawImage(s.img, -w * (ax == null ? .5 : ax), -h * (ay == null ? .5 : ay), w, h); ctx.restore();
+  }
+  function small(s, px) {
+    let c = s.sm && s.sm[px];
+    if (!c) { c = document.createElement('canvas'); c.width = c.height = px * 3; c.getContext('2d').drawImage(s.img, 0, 0, px * 3, px * 3); (s.sm || (s.sm = {}))[px] = c; }
+    return c;
+  }
+
   function shots(ctx, S) {
     for (const s of S.shots) {
+      const sp = spr(s.k === 'spark' ? 'fx/spark' : 'fx/crescent');
+      if (sp) {
+        ctx.globalAlpha = 1;
+        if (s.k === 'spark') img(ctx, sp, s.x, s.y, 36, 36, Math.atan2(s.vy, s.vx), .66);
+        else img(ctx, sp, s.x, s.y, s.r * 2.7, s.r * 2.7, s.spin);
+        continue;
+      }
       if (s.k === 'spark') {
         const v = Math.hypot(s.vx, s.vy) || 1, ux = s.vx / v, uy = s.vy / v;
         ctx.globalAlpha = 1;
@@ -417,11 +434,15 @@
     for (const z of S.zones) {
       ctx.globalAlpha = 1;
       if (z.k === 'mine') {
+        const ms = spr('fx/mine');
+        if (ms) { img(ctx, ms, z.x, z.y - 3, 28, 28, Math.sin(time * 5 + z.x) * .12); continue; }
         const fl = Math.sin(time * 14 + z.x) * 1.5;
         flat(ctx, GOLD, () => { ctx.moveTo(z.x - 3.5, z.y - 4); ctx.lineTo(z.x + Math.sin(time * 6 + z.y) * 2, z.y - 14 - fl); ctx.lineTo(z.x + 3.5, z.y - 4); });
         piece(ctx, EMBER, () => starPath(ctx, z.x, z.y, 7.5, 6.2, 7, z.x));
         flat(ctx, CREAM, () => ctx.arc(z.x, z.y, 2.6, 0, TAU));
       } else if (z.k === 'fire') {
+        const fs = spr('fx/fire');
+        if (fs) { ctx.globalAlpha = Math.min(1, z.dur / .5) * .82; const d = z.r * 2.12 * (1 + Math.sin(time * 6 + z.x) * .025); img(ctx, fs, z.x, z.y, d, d, z.x + time * .25); continue; }
         ctx.globalAlpha = .22; flat(ctx, EMBER, () => ctx.arc(z.x, z.y, z.r, 0, TAU));
         ctx.globalAlpha = Math.min(1, z.dur / .5) * .9;
         const n = Math.max(6, Math.round(z.r / 7));
@@ -443,6 +464,8 @@
         ctx.globalAlpha = z.pd ? .2 : .1; flat(ctx, col, () => ctx.arc(z.x, z.y, z.r * k, 0, TAU));
         ctx.globalAlpha = .85; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash([7, 6]); ctx.lineDashOffset = -time * 24;
         ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        const ss = spr(z.pd ? 'fx/starr' : 'fx/star');
+        if (ss) { const h2 = (1 - k) * 300; ctx.globalAlpha = 1; img(ctx, ss, z.x + h2 * .8, z.y - h2, 58, 58, 0, .25, .7); continue; }
         const h = (1 - k) * 300, sx = z.x + h * .35, sy = z.y - h, ux = -.33, uy = .944;
         ctx.globalAlpha = 1;
         flat(ctx, EMBER, () => orient(ctx, sx, sy, ux, uy, [0, 7, -34, 0, 0, -7]));
@@ -453,7 +476,7 @@
     ctx.globalAlpha = 1;
   }
 
-  ['fx/breath-1', 'fx/breath-2', 'fx/breath-3'].forEach(spr);
+  ['breath-1', 'breath-2', 'breath-3', 'burst-1', 'burst-2', 'burst-3', 'burstr-1', 'burstr-2', 'burstr-3', 'spark', 'crescent', 'mine', 'star', 'starr', 'impact', 'gem-1', 'gem-2', 'gem-3', 'drop', 'beam', 'bolt', 'fire'].forEach(n => spr('fx/' + n));
   function effects(ctx, S) {
     ctx.lineJoin = 'miter'; ctx.lineCap = 'butt'; ctx.miterLimit = 6;
     for (const f of S.fx) {
@@ -491,11 +514,20 @@
         for (let i = 0; i < 11; i++) {
           const h = hash(i * 7 + 3, f.x | 0), a = -Math.PI / 2 + (i - 5) * .24, v = 150 + (h & 63) * 1.6, vx = Math.cos(a) * v, vy = Math.sin(a) * v + 300 * t;
           const x = f.x + vx * t, y = f.y - 10 + Math.sin(a) * v * t + 150 * t * t, s = Math.hypot(vx, vy) || 1, m = (1.7 + (h >> 6 & 3) * .3) * sz;
+          const dsp = f.s === 'heal' && spr('fx/drop');
+          if (dsp) { ctx.globalAlpha = 1; img(ctx, dsp, x, y, 15 * m, 15 * m); continue; }
           const c = i % 3 === 1 ? CREAM : col;
           if (def[1]) piece(ctx, c, () => orient(ctx, x, y, vx / s * m, vy / s * m, def[1]));
           else piece(ctx, c, () => starPath(ctx, x, y, 7 * m, 3 * m, 5, t * 6 + i));
         }
       } else if (f.k === 'ring' && f.fill) {
+        const pre = f.color === '#ff5a4a' ? 'fx/burstr-' : 'fx/burst-', bsp = spr(pre + (k < .2 ? 1 : k < .6 ? 2 : 3));
+        if (bsp) {
+          const R = f.r * (k < .6 ? .45 + .55 * (1 - Math.pow(1 - k / .6, 2.2)) : 1 + (k - .6) * .3), d = R * 2.3;
+          ctx.globalAlpha = k < .6 ? 1 : Math.min(1, (1 - k) / .3);
+          img(ctx, bsp, f.x, f.y, d, d, (hash(f.x | 0, f.y | 0) & 63) / 10);
+          continue;
+        }
         // 폭발: 톱니 별 세 겹이 튀어나왔다가 사라진다.
         const e = 1 - Math.pow(1 - Math.min(1, k / .4), 3), R = f.r * (.3 + .7 * e), rot = (hash(f.x | 0, f.y | 0) & 63) / 10, n = R > 55 ? 12 : 9;
         piece(ctx, f.color === '#ffb347' ? EMBER : f.color, () => starPath(ctx, f.x, f.y, R, R * .7, n, rot), fade);
@@ -508,9 +540,21 @@
         ctx.strokeStyle = CREAM; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, R * .74, 0, TAU); ctx.stroke();
       } else if (f.k === 'beam') {
         const dx = f.x2 - f.x, dy = f.y2 - f.y, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len, w = f.w * (1 - k * .7);
+        const bm = spr('fx/beam');
+        if (bm) { ctx.globalAlpha = fade; img(ctx, bm, f.x, f.y, len + 14, Math.max(14, w * 2.6), Math.atan2(dy, dx), 0, .5); continue; }
         piece(ctx, EMBER, () => orient(ctx, f.x, f.y, ux, uy, [6, w * .85, len, w * .28, len + 10, 0, len, -w * .28, 6, -w * .85, 0, 0]), fade);
         flat(ctx, CREAM, () => orient(ctx, f.x, f.y, ux, uy, [10, w * .5, len - 4, w * .12, len - 4, -w * .12, 10, -w * .5]));
       } else {
+        const bo = spr('fx/bolt'), im = spr('fx/impact');
+        if (bo && im) {
+          ctx.globalAlpha = fade;
+          for (let i = 2; i < f.pts.length; i += 2) {
+            const x0 = f.pts[i - 2], y0 = f.pts[i - 1], x1 = f.pts[i], y1 = f.pts[i + 1];
+            img(ctx, bo, x0, y0, Math.hypot(x1 - x0, y1 - y0), 20, Math.atan2(y1 - y0, x1 - x0), 0, .5);
+          }
+          for (let i = 2; i < f.pts.length; i += 2) img(ctx, im, f.pts[i], f.pts[i + 1], 30, 30, i);
+          continue;
+        }
         const zig = () => {
           ctx.moveTo(f.pts[0], f.pts[1]);
           for (let i = 2; i < f.pts.length; i += 2) {
@@ -569,7 +613,15 @@
 
     zones(ctx, S, time);
 
-    for (const tier of [[0, 3, SKY, 3.4], [3, 10, '#74c7a4', 4.6], [10, 1e9, GOLD, 6.2]]) {
+    const gs = [spr('fx/gem-1'), spr('fx/gem-2'), spr('fx/gem-3')];
+    if (gs[0] && gs[1] && gs[2]) {
+      const cv = [small(gs[0], 12), small(gs[1], 15), small(gs[2], 19)], sz = [12, 15, 19];
+      for (const g of S.gems) {
+        if (Math.abs(g.x - cx) > hw + 8 || Math.abs(g.y - cy) > hh + 8) continue;
+        const t = g.v < 3 ? 0 : g.v < 10 ? 1 : 2, d = sz[t];
+        ctx.drawImage(cv[t], g.x - d / 2, g.y - d / 2, d, d);
+      }
+    } else for (const tier of [[0, 3, SKY, 3.4], [3, 10, '#74c7a4', 4.6], [10, 1e9, GOLD, 6.2]]) {
       const r = tier[3], on = g => g.v >= tier[0] && g.v < tier[1] && Math.abs(g.x - cx) < hw + 8 && Math.abs(g.y - cy) < hh + 8;
       ctx.fillStyle = tier[2]; ctx.beginPath();
       for (const g of S.gems) if (on(g)) { ctx.moveTo(g.x, g.y - r); ctx.lineTo(g.x + r * .75, g.y); ctx.lineTo(g.x, g.y + r); ctx.lineTo(g.x - r * .75, g.y); }
