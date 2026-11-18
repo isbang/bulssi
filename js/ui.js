@@ -254,6 +254,10 @@
     requestAnimationFrame(frame);
   }
 
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !qs.has('bot')) {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* 서비스 워커를 막는 환경에서는 온라인 전용으로 동작 */ });
+  }
+
   G.state = () => S;
   resize();
   toMenu();
