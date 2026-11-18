@@ -8,7 +8,8 @@ const style = html.match(/<style>[\s\S]*?<\/style>/)[0]
 const body = html.match(/<body>([\s\S]*?)<script/)[1];
 const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)]
   .map(m => '<script>\n' + fs.readFileSync(path.join(root, m[1]), 'utf8') + '</script>').join('\n');
-const out = '<title>불씨</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + style + body + scripts + '\n';
+const fonts = html.match(/<link rel="stylesheet"[^>]*>/)[0];
+const out = '<title>불씨</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + fonts + '\n' + style + body + scripts + '\n';
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist', 'bulssi.html'), out);
 console.log('dist/bulssi.html', out.length, 'bytes');

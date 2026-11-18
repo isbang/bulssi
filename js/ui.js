@@ -17,6 +17,7 @@
   const fmt = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
   const unlocked = c => !c.unlock || save[c.unlock.key] >= c.unlock.val;
   const show = (id, on) => $(id).classList.toggle('hidden', !on);
+  const seal = (glyph, kind, cls) => `<span class="seal ${kind} ${cls || ''}">${glyph}</span>`;
 
   // ── 소리 ──
   let ac = null;
@@ -54,7 +55,7 @@
     const AC = window.AudioContext || window.webkitAudioContext;
     if (AC) ac = new AC();
   }
-  function soundLabel() { $('soundBtn').textContent = $('pauseSoundBtn').textContent = save.sound ? '🔊 소리 켜짐' : '🔇 소리 꺼짐'; }
+  function soundLabel() { $('soundBtn').textContent = $('pauseSoundBtn').textContent = save.sound ? '소리 켜짐' : '소리 꺼짐'; }
   function toggleSound() { save.sound = !save.sound; persist(); soundLabel(); initAudio(); }
 
   // ── 화면 크기·입력 ──
@@ -104,20 +105,20 @@
     box.innerHTML = '';
     for (const c of G.CHARS) {
       const b = document.createElement('button'), ok = unlocked(c);
-      b.className = (c.id === save.char ? 'sel ' : '') + (ok ? '' : 'locked');
-      b.innerHTML = `<span>${ok ? c.icon : '🔒'}</span>${c.name}`;
+      b.className = 'char' + (c.id === save.char ? ' sel' : '') + (ok ? '' : ' locked');
+      b.innerHTML = seal(c.icon, 'c') + c.name;
       b.onclick = () => { save.char = c.id; renderMenu(); };
       box.appendChild(b);
     }
     const c = G.CHARS.find(x => x.id === save.char) || G.CHARS[0], ok = unlocked(c), w = G.WEAPONS[c.weapon];
     $('charInfo').innerHTML = ok
-      ? `<b>${c.icon} ${c.name}</b><br>${c.desc}<br>시작 무기: ${w.icon} ${w.name} — ${w.desc}`
-      : `<b>🔒 ${c.name}</b><br>해금 조건: ${c.unlock.text}`;
+      ? `<h3>${c.name}</h3><p>${c.desc}</p><p class="wp">${seal(w.icon, 'w', 'sm')}<span><b>${w.name}</b>${w.desc}</span></p>`
+      : `<h3>${c.name}</h3><p>아직 잠겨 있다. ${c.unlock.text}.</p>`;
     $('startBtn').disabled = !ok;
     show('depthRow', save.maxDepth > 0);
     save.depth = Math.min(save.depth, save.maxDepth);
-    $('depthLabel').textContent = save.depth ? `밤의 깊이 ${save.depth} — 적이 더 강하다` : '밤의 깊이 0 — 기본';
-    $('records').innerHTML = `<div><b>${fmt(save.bestTime)}</b>최고 기록</div><div><b>${save.wins}</b>맞이한 새벽</div><div><b>${save.runs}</b>지새운 밤</div>`;
+    $('depthLabel').textContent = save.depth ? `밤의 깊이 ${save.depth} · 적이 더 강하다` : '밤의 깊이 0';
+    $('records').innerHTML = `<div><dt>최장 기록</dt><dd>${fmt(save.bestTime)}</dd></div><div><dt>맞은 새벽</dt><dd>${save.wins}</dd></div><div><dt>지샌 밤</dt><dd>${save.runs}</dd></div>`;
     soundLabel();
   }
   $('depthDown').onclick = () => { save.depth = Math.max(0, save.depth - 1); renderMenu(); };
@@ -140,7 +141,7 @@
     resize();
     for (const id of ['menu', 'choice', 'pause', 'over']) show(id, false);
     show('hud', true);
-    toast(`${S.omen.icon} 오늘 밤의 징조: ${S.omen.name}<br>${S.omen.desc}`, 5);
+    toast(`<small>오늘 밤의 징조</small><b>${S.omen.name}</b>${S.omen.desc}`, 5);
   }
   $('startBtn').onclick = startRun;
   $('retryBtn').onclick = startRun;
@@ -153,10 +154,10 @@
   function hud() {
     const p = S.p;
     set('xp', Math.round(p.xp / p.xpNext * 200), v => { $('xpbar').firstElementChild.style.width = v / 2 + '%'; });
-    set('lvl', p.level, v => { $('lvl').textContent = 'Lv ' + v; });
-    set('kills', S.kills, v => { $('kills').textContent = '💀 ' + v; });
+    set('lvl', p.level, v => { $('lvl').textContent = '레벨 ' + v; });
+    set('kills', S.kills, v => { $('kills').textContent = '처치 ' + v; });
     const left = Math.max(0, Math.ceil(G.RUN_LEN - S.t));
-    set('timer', S.finalUp ? -1 : left, v => { $('timer').innerHTML = v < 0 ? '밤의 주인<small>쓰러뜨리면 새벽</small>' : fmt(v) + '<small>새벽까지</small>'; });
+    set('timer', S.finalUp ? -1 : left, v => { $('timer').innerHTML = v < 0 ? '<small>쓰러뜨리면 새벽</small>밤의 주인' : '<small>새벽까지</small>' + fmt(v); });
     const b = S.boss;
     set('boss', b ? b.id : 0, v => { show('bossbar', !!v); if (b) $('bossbar').firstElementChild.textContent = G.ENEMIES[b.type].name; });
     if (b) set('bosshp', Math.round(b.hp / b.maxHp * 200), v => { $('bossbar').querySelector('i').style.width = Math.max(0, v / 2) + '%'; });
@@ -172,7 +173,7 @@
       const b = document.createElement('button');
       const cls = o.tag === '각성' ? 'awk' : o.tag === '유물' ? 'relic' : o.tag.startsWith('새') ? 'new' : '';
       b.className = 'card';
-      b.innerHTML = `<div class="ic">${o.icon}</div><div><div class="nm">${o.name}<span class="tag ${cls}">${o.tag}</span></div><div class="ds">${o.desc}</div></div>`;
+      b.innerHTML = `${seal(o.icon, o.kind)}<div><div class="nm">${o.name}<span class="tag ${cls}">${o.tag}</span></div><div class="ds">${o.desc}</div></div>`;
       b.onclick = () => { G.choose(S, i); choiceOpen = false; show('choice', false); };
       box.appendChild(b);
     });
@@ -181,17 +182,17 @@
     setTimeout(() => box.classList.remove('locked'), 450);
     const rr = $('rerollBtn');
     show('rerollBtn', ch.kind === 'level' && S.rerolls > 0);
-    rr.textContent = `🎲 다시 뽑기 (${S.rerolls}회 남음)`;
+    rr.textContent = `다시 뽑기 · ${S.rerolls}번 남음`;
     show('choice', true);
   }
   $('rerollBtn').onclick = () => { if (G.reroll(S)) showChoice(); };
 
   function buildHtml() {
-    const chip = (icon, name, extra) => `<span>${icon} ${name}${extra ? ' ' + extra : ''}</span>`;
-    const ws = S.weapons.map(w => chip(G.WEAPONS[w.id].icon, G.WEAPONS[w.id].name, w.lvl === 6 ? '각성' : 'Lv' + w.lvl)).join('');
-    const ps = S.passives.map(x => chip(G.PASSIVES[x.id].icon, G.PASSIVES[x.id].name, 'Lv' + x.lvl)).join('');
-    const rs = S.relics.map(id => chip(G.RELICS[id].icon, G.RELICS[id].name)).join('');
-    return `<div class="panel"><b>${S.omen.icon} ${S.omen.name}</b><br>${S.omen.desc}</div>
+    const chip = (name, extra) => `<span>${name}${extra ? `<i>${extra}</i>` : ''}</span>`;
+    const ws = S.weapons.map(w => chip(G.WEAPONS[w.id].name, w.lvl === 6 ? '각성' : w.lvl)).join('');
+    const ps = S.passives.map(x => chip(G.PASSIVES[x.id].name, x.lvl)).join('');
+    const rs = S.relics.map(id => chip(G.RELICS[id].name)).join('');
+    return `<div class="info"><h3>${S.omen.name}</h3><p>${S.omen.desc}</p></div>
       <div class="label">무기</div><div class="build">${ws}</div>
       ${ps ? `<div class="label">능력</div><div class="build">${ps}</div>` : ''}
       ${rs ? `<div class="label">유물</div><div class="build">${rs}</div>` : ''}`;
@@ -216,11 +217,11 @@
     if (win) { save.wins++; if (S.depth === save.maxDepth && save.maxDepth < MAX_DEPTH) { save.maxDepth++; depthUp = true; } }
     persist();
     const fresh = G.CHARS.filter(c => unlocked(c) && !before.includes(c.id));
-    $('overTitle').textContent = win ? '☀️ 새벽이 밝았다' : '불씨가 꺼졌다…';
-    $('overSub').textContent = win ? '긴 밤을 끝까지 버텨냈다.' : `${S.omen.icon} ${S.omen.name} — 새벽까지 ${fmt(Math.max(0, G.RUN_LEN - S.t))} 남기고.`;
-    $('overStats').innerHTML = `<div><b>${fmt(S.t)}</b>버틴 시간</div><div><b>${S.kills}</b>처치</div><div><b>${S.p.level}</b>레벨</div>`;
-    let u = fresh.map(c => `🔓 새 불씨 해금: ${c.icon} ${c.name}`).join('<br>');
-    if (depthUp) u += (u ? '<br>' : '') + `🌑 밤의 깊이 ${save.maxDepth} 해금`;
+    $('overTitle').textContent = win ? '새벽이 왔다' : '불이 꺼졌다';
+    $('overSub').textContent = win ? `${S.omen.name}. 긴 밤이 끝났다.` : S.finalUp ? `${S.omen.name}. 밤의 주인 앞에서.` : `${S.omen.name}. 새벽까지 ${fmt(G.RUN_LEN - S.t)} 남았다.`;
+    $('overStats').innerHTML = `<div><dt>버틴 시간</dt><dd>${fmt(S.t)}</dd></div><div><dt>처치</dt><dd>${S.kills}</dd></div><div><dt>레벨</dt><dd>${S.p.level}</dd></div>`;
+    let u = fresh.map(c => `${c.name}이(가) 열렸다.`).join('<br>');
+    if (depthUp) u += (u ? '<br>' : '') + `밤의 깊이 ${save.maxDepth}이(가) 열렸다.`;
     $('overUnlock').innerHTML = u ? `<div class="unlock">${u}</div>` : '';
     setTimeout(() => { if (S && S.over) show('over', true); }, win ? 1200 : 700);
   }

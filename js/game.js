@@ -141,7 +141,7 @@
       if (!j) S.boss = e;
     }
     if (i === 2) S.finalUp = true;
-    ev(S, 'toast', i === 2 ? '⚠️ 밤의 주인이 나타났다 — 쓰러뜨리면 새벽이 온다' : '⚠️ 우두머리 등장');
+    ev(S, 'toast', i === 2 ? '밤의 주인이 나타났다. 쓰러뜨리면 새벽이 온다.' : '우두머리가 나타났다.');
     ev(S, 'sfx', 'boss');
   }
 
@@ -156,7 +156,7 @@
         const a = a0 + i / n * TAU, e = spawn(S, 'shade', p.x + Math.cos(a) * R, p.y + Math.sin(a) * R);
         e.speed *= .8;
       }
-      ev(S, 'toast', '그림자가 사방을 에워싼다');
+      ev(S, 'toast', '그림자가 사방을 에워싼다.');
     } else if (s.k === 'rush') {
       const a = r() * TAU, cx = Math.cos(a), cy = Math.sin(a), R = S.viewR + 60, n = Math.floor(12 + min);
       for (let i = 0; i < n; i++) {
@@ -275,7 +275,7 @@
     if (S.has.second && !S.revived) {
       S.revived = true; p.hp = S.st.maxHp * .5; p.iframes = 2.5;
       S.zones.push({ k: 'blast', x: p.x, y: p.y, r: 220, dmg: 80 + S.t / 6, delay: 0, kb: 420 });
-      ev(S, 'toast', '🕊️ 두 번째 숨 — 다시 타오른다'); ev(S, 'sfx', 'level');
+      ev(S, 'toast', '두 번째 숨. 다시 타오른다.'); ev(S, 'sfx', 'level');
     } else { p.hp = 0; S.over = 'dead'; ev(S, 'sfx', 'dead'); }
   }
 
@@ -554,13 +554,13 @@
     s.dead = true;
     S.fx.push({ k: 'ring', x: s.x, y: s.y, r: 120, t: 0, d: .5, color: G.SHRINES[s.k].color });
     ev(S, 'sfx', 'chest');
-    if (s.k === 'heal') { p.hp = Math.min(S.st.maxHp, p.hp + S.st.maxHp * .5); ev(S, 'toast', '💧 치유의 샘 — 체력 회복'); }
-    else if (s.k === 'wisdom') { gainXp(S, (p.xpNext - p.xp) / S.st.xp + .01); ev(S, 'toast', '📘 지식의 돌 — 레벨 업'); }
-    else if (s.k === 'pact') { S.curse++; S.queue.push('relic'); ev(S, 'toast', '🩸 계약 성립 — 유물을 얻지만 적이 강해진다'); }
-    else if (S.rng() < .6) { S.queue.push('relic'); ev(S, 'toast', '🎲 운이 좋았다 — 유물 획득'); }
+    if (s.k === 'heal') { p.hp = Math.min(S.st.maxHp, p.hp + S.st.maxHp * .5); ev(S, 'toast', '치유의 샘. 체력을 되찾았다.'); }
+    else if (s.k === 'wisdom') { gainXp(S, (p.xpNext - p.xp) / S.st.xp + .01); ev(S, 'toast', '지식의 돌. 한 단계 자랐다.'); }
+    else if (s.k === 'pact') { S.curse++; S.queue.push('relic'); ev(S, 'toast', '계약이 맺어졌다. 유물을 얻고, 적은 강해진다.'); }
+    else if (S.rng() < .6) { S.queue.push('relic'); ev(S, 'toast', '운이 좋았다. 유물을 얻었다.'); }
     else {
       for (let i = 0; i < 2; i++) { const [x, y] = around(S, 240); spawnElite(S, x, y); }
-      ev(S, 'toast', '🎲 함정이었다 — 정예가 나타났다');
+      ev(S, 'toast', '함정이었다. 정예가 나타났다.');
     }
   }
 
@@ -594,14 +594,14 @@
     for (const id in G.WEAPONS) {
       const d = G.WEAPONS[id], w = S.weapons.find(x => x.id === id);
       if (w) {
-        if (w.lvl < 6) pool.push({ w: w.lvl === 5 ? 2.2 : 1.7, icon: d.icon, name: d.name, tag: w.lvl === 5 ? '각성' : 'Lv ' + (w.lvl + 1), desc: d.up[w.lvl], fn: () => { w.lvl++; } });
-      } else if (S.weapons.length < 4) pool.push({ w: 1, icon: d.icon, name: d.name, tag: '새 무기', desc: d.desc, fn: () => addWeapon(S, id) });
+        if (w.lvl < 6) pool.push({ w: w.lvl === 5 ? 2.2 : 1.7, kind: 'w', icon: d.icon, name: d.name, tag: w.lvl === 5 ? '각성' : 'Lv ' + (w.lvl + 1), desc: d.up[w.lvl], fn: () => { w.lvl++; } });
+      } else if (S.weapons.length < 4) pool.push({ w: 1, kind: 'w', icon: d.icon, name: d.name, tag: '새 무기', desc: d.desc, fn: () => addWeapon(S, id) });
     }
     for (const id in G.PASSIVES) {
       const d = G.PASSIVES[id], ps = S.passives.find(x => x.id === id);
       if (ps) {
-        if (ps.lvl < d.max) pool.push({ w: 1.4, icon: d.icon, name: d.name, tag: 'Lv ' + (ps.lvl + 1), desc: d.desc, fn: () => { ps.lvl++; } });
-      } else if (S.passives.length < 5) pool.push({ w: 1, icon: d.icon, name: d.name, tag: '새 능력', desc: d.desc, fn: () => S.passives.push({ id, lvl: 1 }) });
+        if (ps.lvl < d.max) pool.push({ w: 1.4, kind: 'p', icon: d.icon, name: d.name, tag: 'Lv ' + (ps.lvl + 1), desc: d.desc, fn: () => { ps.lvl++; } });
+      } else if (S.passives.length < 5) pool.push({ w: 1, kind: 'p', icon: d.icon, name: d.name, tag: '새 능력', desc: d.desc, fn: () => S.passives.push({ id, lvl: 1 }) });
     }
     const out = [], n = 3 + S.mod.choices + (S.has.clover ? 1 : 0);
     while (out.length < n && pool.length) { const o = wpick(S.rng, pool); pool.splice(pool.indexOf(o), 1); out.push(o); }
@@ -609,15 +609,15 @@
     return out;
   }
 
-  const healOpt = S => ({ icon: '❤️', name: '숨 고르기', tag: '회복', desc: '체력을 30% 회복한다', fn: () => { S.p.hp = Math.min(S.st.maxHp, S.p.hp + S.st.maxHp * .3); } });
+  const healOpt = S => ({ kind: 'h', icon: '쉼', name: '숨 고르기', tag: '회복', desc: '체력을 30% 회복한다', fn: () => { S.p.hp = Math.min(S.st.maxHp, S.p.hp + S.st.maxHp * .3); } });
 
   function openChoice(S, kind) {
-    if (kind === 'level') S.choice = { kind, title: '레벨 업!', opts: levelOpts(S) };
+    if (kind === 'level') S.choice = { kind, title: '레벨 ' + S.p.level, opts: levelOpts(S) };
     else {
       const ids = shuffle(S.rng, Object.keys(G.RELICS).filter(id => !S.has[id])).slice(0, 3);
-      const opts = ids.map(id => { const d = G.RELICS[id]; return { icon: d.icon, name: d.name, tag: '유물', desc: d.desc, fn: () => addRelic(S, id) }; });
+      const opts = ids.map(id => { const d = G.RELICS[id]; return { kind: 'r', icon: d.icon, name: d.name, tag: '유물', desc: d.desc, fn: () => addRelic(S, id) }; });
       if (!opts.length) opts.push(healOpt(S));
-      S.choice = { kind, title: '유물 발견', opts };
+      S.choice = { kind, title: '유물을 주웠다', opts };
     }
     ev(S, 'sfx', kind === 'level' ? 'level' : 'chest');
   }

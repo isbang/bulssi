@@ -6,83 +6,126 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0b0e22">
+<meta name="theme-color" content="#0d1020">
 <meta name="apple-mobile-web-app-title" content="불씨">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Song+Myung&display=swap">
 <title>불씨</title>
 <style>
-  :root { color-scheme: dark; }
+  /* 평평한 면과 가는 선, 낙관 도장. 빛나는 것은 게임 속 불뿐이다. */
+  :root {
+    color-scheme: dark;
+    --ink: #0d1020; --night: #161b38; --line: #2e3560; --paper: #ece3cf; --dim: #9b9bb0;
+    --ember: #f08a2e; --ember-deep: #a84d16; --jade: #74c7a4; --gold: #e3ba52; --rose: #e2607a; --sky: #6cb6e6;
+    --disp: "Song Myung", "Nanum Myeongjo", "AppleMyungjo", serif;
+    --body: "Gowun Dodum", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
-    margin: 0; height: 100%; background: #0b0e22; color: #f3ead8; overflow: hidden; position: relative;
-    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    margin: 0; height: 100%; background: var(--ink); color: var(--paper); overflow: hidden; position: relative;
+    font-family: var(--body); font-size: 15px; line-height: 1.55;
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; overscroll-behavior: none;
   }
   canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   .hidden { display: none !important; }
-  button { font: inherit; color: inherit; border: 0; cursor: pointer; touch-action: manipulation; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; touch-action: manipulation; }
+  button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+  h1, h2, h3, p, dl, dd { margin: 0; }
+
+  .seal {
+    display: inline-grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 3px;
+    font-family: var(--disp); font-size: 25px; line-height: 1; color: var(--ink); background: var(--ember);
+  }
+  .seal.p { background: var(--jade); }
+  .seal.r { background: var(--gold); }
+  .seal.h { background: var(--rose); }
+  .seal.sm { width: 26px; height: 26px; font-size: 16px; }
 
   #hud { position: absolute; inset: 0; pointer-events: none; padding-top: calc(env(safe-area-inset-top) + 6px); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-  #xpbar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
-  #xpbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #5ad0ff, #7dffa0); }
-  #hudrow { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; font-weight: 700; font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px #000; }
-  #hudrow .side { width: 96px; font-size: 14px; }
-  #timer { font-size: 20px; text-align: center; }
-  #timer small { display: block; font-size: 10px; font-weight: 500; opacity: .7; }
-  #pauseBtn { pointer-events: auto; width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.12); font-size: 16px; float: right; }
-  #bossbar { margin: 8px auto 0; max-width: 420px; }
-  #bossbar b { display: block; font-size: 12px; text-align: center; color: #ff8aa0; text-shadow: 0 1px 3px #000; }
-  #bossbar div { height: 8px; border-radius: 4px; background: rgba(0,0,0,.5); overflow: hidden; margin-top: 3px; }
-  #bossbar i { display: block; height: 100%; background: #ff5a7a; }
-  #toast { margin: 14px auto 0; max-width: 340px; padding: 9px 14px; border-radius: 12px; background: rgba(10,12,28,.85); border: 1px solid rgba(255,255,255,.14); font-size: 13px; text-align: center; line-height: 1.45; opacity: 0; transition: opacity .3s; }
+  #xpbar { height: 5px; background: var(--line); }
+  #xpbar i { display: block; height: 100%; width: 0; background: var(--sky); }
+  #hudrow { display: flex; align-items: flex-start; justify-content: space-between; margin-top: 8px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px var(--ink); }
+  #hudrow .side { width: 88px; font-size: 13px; line-height: 1.4; }
+  #kills { color: var(--dim); }
+  #timer { font-family: var(--disp); font-size: 28px; line-height: 1; text-align: center; }
+  #timer small { display: block; margin-bottom: 4px; font-family: var(--body); font-size: 11px; color: var(--dim); }
+  #pauseBtn { pointer-events: auto; float: right; width: 44px; height: 44px; display: grid; place-content: center; grid-auto-flow: column; gap: 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--ink); }
+  #pauseBtn::before, #pauseBtn::after { content: ""; width: 4px; height: 14px; background: var(--paper); }
+  #bossbar { margin: 10px auto 0; max-width: 420px; }
+  #bossbar b { display: block; font-family: var(--disp); font-weight: 400; font-size: 15px; text-align: center; color: var(--rose); text-shadow: 0 1px 2px var(--ink); }
+  #bossbar div { height: 6px; margin-top: 4px; background: var(--line); }
+  #bossbar i { display: block; height: 100%; background: var(--rose); }
+  #toast { margin: 14px auto 0; max-width: 320px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 4px; background: rgba(13,16,32,.92); font-size: 13px; text-align: center; opacity: 0; transition: opacity .25s; }
   #toast.show { opacity: 1; }
+  #toast small { display: block; font-size: 11px; color: var(--dim); }
+  #toast b { display: block; font-family: var(--disp); font-weight: 400; font-size: 20px; color: var(--ember); }
 
   .screen {
     position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; overflow-y: auto; touch-action: pan-y;
     padding-block: calc(env(safe-area-inset-top) + 20px) calc(env(safe-area-inset-bottom) + 20px);
-    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
   }
-  .screen > * { width: 100%; max-width: 420px; flex-shrink: 0; }
-  .dim { background: rgba(6,8,20,.82); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); justify-content: center; }
+  .screen > * { width: 100%; max-width: 400px; flex-shrink: 0; }
+  .dim { background: rgba(13,16,32,.97); justify-content: center; }
   .dim.top { justify-content: flex-start; }
-  h1 { margin: 6vh 0 0; font-size: 56px; text-align: center; letter-spacing: 6px; color: #ffb347; text-shadow: 0 0 28px rgba(255,122,26,.8); }
-  h2 { margin: 0 0 14px; font-size: 24px; text-align: center; }
-  .sub { margin: 4px 0 22px; text-align: center; opacity: .7; font-size: 14px; }
-  .chars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .chars button { padding: 10px 2px 8px; border-radius: 14px; background: rgba(255,255,255,.07); border: 2px solid transparent; font-size: 11px; }
-  .chars button span { display: block; font-size: 26px; line-height: 1.3; }
-  .chars button.sel { border-color: #ffb347; background: rgba(255,179,71,.16); }
-  .chars button.locked span { filter: grayscale(1) brightness(.5); }
-  .panel { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.06); font-size: 13px; line-height: 1.55; min-height: 66px; }
-  .panel b { font-size: 15px; color: #ffcf8a; }
-  .row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; font-size: 14px; }
-  .row button { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.1); font-size: 20px; }
-  .primary { margin-top: 16px; padding: 16px; border-radius: 16px; background: linear-gradient(180deg, #ffb347, #ff7a1a); color: #2a1200; font-size: 18px; font-weight: 800; box-shadow: 0 6px 24px rgba(255,122,26,.4); }
-  .primary:disabled { filter: grayscale(1); opacity: .5; box-shadow: none; }
-  .ghost { margin-top: 10px; padding: 13px; border-radius: 14px; background: rgba(255,255,255,.09); font-size: 15px; }
-  .records { display: flex; justify-content: space-around; margin-top: 18px; font-size: 12px; opacity: .8; text-align: center; }
-  .records b { display: block; font-size: 17px; color: #ffcf8a; }
-  .help { margin: 16px 0 0; text-align: center; font-size: 12px; opacity: .6; line-height: 1.6; }
 
-  .cards { display: flex; flex-direction: column; gap: 10px; }
+  .title { margin-top: 5vh; }
+  h1 { font-family: var(--disp); font-weight: 400; font-size: 88px; line-height: 1; letter-spacing: -2px; }
+  h1::after { content: ""; display: inline-block; width: 14px; height: 14px; margin-left: 8px; background: var(--ember); }
+  .title p { margin-top: 10px; color: var(--dim); }
+  h2 { font-family: var(--disp); font-weight: 400; font-size: 32px; line-height: 1.2; }
+  h2 + p { margin-top: 4px; color: var(--dim); font-size: 14px; }
+  h3 { font-family: var(--disp); font-weight: 400; font-size: 20px; }
+
+  .chars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 28px; }
+  .char { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0 7px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; }
+  .char.sel { border-color: var(--ember); background: var(--night); }
+  .char.locked { color: var(--dim); }
+  .char.locked .seal { background: none; color: var(--line); box-shadow: inset 0 0 0 1px var(--line); }
+  .info { margin-top: 14px; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); min-height: 112px; font-size: 14px; }
+  .info p { color: var(--dim); }
+  .info .wp { display: flex; gap: 10px; align-items: flex-start; margin-top: 8px; }
+  .info .wp b { color: var(--paper); font-weight: 400; margin-right: 4px; }
+  .depth { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; font-size: 14px; }
+  .depth button { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 4px; font-size: 20px; line-height: 1; }
+
+  .btn { display: block; margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 4px; font-size: 16px; text-align: center; }
+  .btn:active { background: var(--night); }
+  .btn.primary { margin-top: 22px; border: 0; background: var(--ember); color: #1d0e02; font-weight: 700; font-size: 17px; box-shadow: 0 4px 0 var(--ember-deep); }
+  .btn.primary:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ember-deep); background: var(--ember); }
+  .btn.primary:disabled { background: var(--line); color: var(--dim); box-shadow: none; transform: none; }
+  .link { margin-top: 14px; padding: 8px; font-size: 13px; color: var(--dim); text-decoration: underline; text-underline-offset: 3px; }
+
+  .records { display: flex; margin-top: 26px; }
+  .records div { flex: 1; padding-left: 12px; border-left: 1px solid var(--line); }
+  .records dt { font-size: 11px; color: var(--dim); }
+  .records dd { font-family: var(--disp); font-size: 24px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+  .help { margin-top: 20px; font-size: 13px; color: var(--dim); }
+
+  .cards { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
   .cards.locked { pointer-events: none; }
-  .card { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; text-align: left; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); }
-  .card:active { background: rgba(255,179,71,.22); }
-  .card .ic { font-size: 30px; width: 40px; text-align: center; flex-shrink: 0; }
-  .card .nm { font-size: 16px; font-weight: 700; }
-  .card .tag { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 8px; font-size: 11px; font-weight: 700; background: rgba(255,255,255,.14); vertical-align: 2px; }
-  .card .tag.new { background: #5ad0ff; color: #04202c; }
-  .card .tag.awk { background: #ffd75a; color: #3a2a00; }
-  .card .tag.relic { background: #c79bff; color: #22083c; }
-  .card .ds { margin-top: 3px; font-size: 13px; opacity: .8; line-height: 1.4; }
-  .build { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
-  .build span { padding: 5px 9px; border-radius: 10px; background: rgba(255,255,255,.08); font-size: 12px; }
-  .label { margin: 12px 0 6px; font-size: 11px; opacity: .55; letter-spacing: 1px; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; font-size: 12px; opacity: .9; }
-  .stats b { display: block; font-size: 22px; color: #ffcf8a; }
-  .unlock { margin-top: 12px; padding: 10px; border-radius: 12px; background: rgba(125,255,160,.12); border: 1px solid rgba(125,255,160,.4); font-size: 13px; text-align: center; line-height: 1.6; }
+  .card { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--night); text-align: left; }
+  .card:active { border-color: var(--ember); }
+  .card > div { min-width: 0; }
+  .card .nm { font-size: 16px; }
+  .card .tag { margin-left: 8px; font-size: 12px; color: var(--dim); }
+  .card .tag.new { color: var(--sky); }
+  .card .tag.awk { color: var(--ember); }
+  .card .tag.relic { color: var(--gold); }
+  .card .ds { font-size: 13px; color: var(--dim); line-height: 1.45; }
+
+  .label { margin: 16px 0 6px; font-size: 11px; color: var(--dim); }
+  .build { display: flex; flex-wrap: wrap; gap: 6px; }
+  .build span { padding: 4px 8px; border: 1px solid var(--line); border-radius: 3px; font-size: 13px; }
+  .build i { font-style: normal; color: var(--dim); margin-left: 4px; }
+  #pause .info { min-height: 0; margin-top: 16px; }
+  #over .records { margin-top: 22px; }
+  .unlock { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--jade); }
+
+  @media (prefers-reduced-motion: reduce) { #toast { transition: none; } .btn.primary:active { transform: none; } }
 </style>
 </head>
 <body>
@@ -91,47 +134,50 @@
 <div id="hud" class="hidden">
   <div id="xpbar"><i></i></div>
   <div id="hudrow">
-    <div class="side"><span id="lvl"></span><br><span id="kills"></span></div>
+    <div class="side"><div id="lvl"></div><div id="kills"></div></div>
     <div id="timer"></div>
-    <div class="side"><button id="pauseBtn" aria-label="일시정지">Ⅱ</button></div>
+    <div class="side"><button id="pauseBtn" aria-label="일시정지"></button></div>
   </div>
   <div id="bossbar" class="hidden"><b></b><div><i></i></div></div>
   <div id="toast"></div>
 </div>
 
 <div id="menu" class="screen">
-  <h1>불씨</h1>
-  <p class="sub">긴 밤을 버텨 새벽을 맞이하라</p>
+  <header class="title">
+    <h1>불씨</h1>
+    <p>밤은 길고, 불은 작다.</p>
+  </header>
   <div id="chars" class="chars"></div>
-  <div id="charInfo" class="panel"></div>
-  <div id="depthRow" class="row hidden"><button id="depthDown">−</button><span id="depthLabel"></span><button id="depthUp">+</button></div>
-  <button id="startBtn" class="primary">밤으로 나서기</button>
-  <div id="records" class="records"></div>
-  <p class="help">화면 아무 곳이나 누른 채 끌면 이동 · 공격은 자동<br>한 판 12~15분 · 매일 밤 다른 징조가 찾아온다</p>
-  <button id="soundBtn" class="ghost"></button>
+  <div id="charInfo" class="info"></div>
+  <div id="depthRow" class="depth hidden"><button id="depthDown" aria-label="한 단계 얕게">−</button><span id="depthLabel"></span><button id="depthUp" aria-label="한 단계 깊게">+</button></div>
+  <button id="startBtn" class="btn primary">밤길 나서기</button>
+  <dl id="records" class="records"></dl>
+  <p class="help">누른 채 끌면 움직인다. 공격은 저절로 나간다.</p>
+  <button id="soundBtn" class="link"></button>
 </div>
 
 <div id="choice" class="screen dim hidden">
   <h2 id="choiceTitle"></h2>
+  <p>하나를 고른다.</p>
   <div id="cards" class="cards"></div>
-  <button id="rerollBtn" class="ghost"></button>
+  <button id="rerollBtn" class="btn"></button>
 </div>
 
 <div id="pause" class="screen dim top hidden">
   <h2>잠시 멈춤</h2>
   <div id="pauseBody"></div>
-  <button id="resumeBtn" class="primary">계속하기</button>
-  <button id="pauseSoundBtn" class="ghost"></button>
-  <button id="quitBtn" class="ghost">이번 밤 포기하기</button>
+  <button id="resumeBtn" class="btn primary">계속</button>
+  <button id="quitBtn" class="btn">그만두기</button>
+  <button id="pauseSoundBtn" class="link"></button>
 </div>
 
 <div id="over" class="screen dim hidden">
   <h2 id="overTitle"></h2>
-  <p id="overSub" class="sub"></p>
-  <div id="overStats" class="stats"></div>
+  <p id="overSub"></p>
+  <dl id="overStats" class="records"></dl>
   <div id="overUnlock"></div>
-  <button id="retryBtn" class="primary">다시 도전</button>
-  <button id="menuBtn" class="ghost">처음 화면으로</button>
+  <button id="retryBtn" class="btn primary">한 번 더</button>
+  <button id="menuBtn" class="btn">처음으로</button>
 </div>
 
 <script src="js/data.js"></script>

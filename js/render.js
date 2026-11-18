@@ -2,6 +2,28 @@
 (function () {
   const TAU = Math.PI * 2;
   const glows = {};
+  const BODY = '"Gowun Dodum", sans-serif', DISP = '"Song Myung", serif';
+
+  function seal(ctx, x, y, size, glyph, color) {
+    ctx.fillStyle = color; ctx.fillRect(x - size / 2, y - size / 2, size, size);
+    ctx.fillStyle = '#0d1020'; ctx.font = Math.round(size * .68) + 'px ' + DISP;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(glyph, x, y + size * .04);
+  }
+
+  function pickup(ctx, k, x, y) {
+    if (k === 'chest') {
+      ctx.fillStyle = '#e3ba52'; ctx.fillRect(x - 9, y - 6, 18, 13);
+      ctx.fillStyle = '#8a6a1c'; ctx.fillRect(x - 9, y - 2, 18, 2); ctx.fillRect(x - 2, y - 3, 4, 5);
+    } else if (k === 'heal') {
+      ctx.fillStyle = '#e2607a';
+      ctx.beginPath(); ctx.moveTo(x, y + 8); ctx.bezierCurveTo(x - 14, y - 2, x - 6, y - 11, x, y - 4); ctx.bezierCurveTo(x + 6, y - 11, x + 14, y - 2, x, y + 8); ctx.fill();
+    } else {
+      ctx.strokeStyle = '#6cb6e6'; ctx.lineWidth = 5; ctx.lineCap = 'butt';
+      ctx.beginPath(); ctx.arc(x, y - 1, 6, Math.PI, 0); ctx.moveTo(x - 6, y - 1); ctx.lineTo(x - 6, y + 7); ctx.moveTo(x + 6, y - 1); ctx.lineTo(x + 6, y + 7); ctx.stroke();
+      ctx.fillStyle = '#ece3cf'; ctx.fillRect(x - 8.5, y + 4, 5, 3); ctx.fillRect(x + 3.5, y + 4, 5, 3);
+    }
+  }
 
   function glow(ctx, color, x, y, r, a) {
     let g = glows[color];
@@ -140,14 +162,13 @@
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
 
-  function indicator(ctx, V, sx, sy, icon, color) {
-    const m = 30, top = 86;
+  function indicator(ctx, V, sx, sy, glyph, color) {
+    const m = 26, top = 92;
     if (sx > m && sx < V.w - m && sy > top && sy < V.h - m) return;
     const x = Math.max(m, Math.min(V.w - m, sx)), y = Math.max(top, Math.min(V.h - m, sy));
-    ctx.fillStyle = 'rgba(10,12,28,.8)'; ctx.strokeStyle = color; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(x, y, 17, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(icon, x, y + 1);
+    ctx.fillStyle = '#0d1020'; ctx.fillRect(x - 15, y - 15, 30, 30);
+    if (glyph) seal(ctx, x, y, 24, glyph, color); else pickup(ctx, 'chest', x, y);
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.strokeRect(x - 14.5, y - 14.5, 29, 29);
   }
 
   G.render = function (ctx, S, V) {
@@ -171,8 +192,8 @@
       ctx.strokeStyle = d.color; ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
       ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
       if (s.charge > 0) { ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, -TAU / 4, -TAU / 4 + TAU * s.charge / 2.2); ctx.stroke(); }
-      ctx.font = '24px sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(d.icon, s.x, s.y);
-      ctx.font = 'bold 11px sans-serif'; ctx.fillStyle = d.color; ctx.fillText(d.name, s.x, s.y + s.r + 12);
+      seal(ctx, s.x, s.y, 26, d.icon, d.color);
+      ctx.font = '11px ' + BODY; ctx.fillStyle = d.color; ctx.fillText(d.name, s.x, s.y + s.r + 12);
       ctx.globalAlpha = 1;
     }
 
@@ -188,12 +209,11 @@
       ctx.fill();
     }
 
-    ctx.font = '20px sans-serif'; ctx.fillStyle = '#fff';
     for (const k of S.pickups) {
       const bob = Math.sin(time * 4 + k.x) * 3;
-      ctx.globalCompositeOperation = 'lighter'; glow(ctx, k.k === 'chest' ? '#ffd75a' : '#ff7a9a', k.x, k.y, 26, .6);
+      ctx.globalCompositeOperation = 'lighter'; glow(ctx, k.k === 'chest' ? '#e3ba52' : k.k === 'heal' ? '#e2607a' : '#6cb6e6', k.x, k.y, 24, .5);
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-      ctx.fillText(k.k === 'chest' ? '🎁' : k.k === 'heal' ? '❤️' : '🧲', k.x, k.y + bob);
+      pickup(ctx, k.k, k.x, k.y + bob);
     }
 
     enemies(ctx, S, cx, cy, hw, hh);
@@ -231,9 +251,10 @@
 
     effects(ctx, S);
 
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const t of S.texts) {
       ctx.globalAlpha = 1 - t.t / .6;
-      ctx.font = t.crit ? 'bold 15px sans-serif' : 'bold 11px sans-serif';
+      ctx.font = (t.crit ? 'bold 15px ' : 'bold 11px ') + BODY;
       ctx.fillStyle = t.crit ? '#ffd75a' : '#fff';
       ctx.fillText(t.v, t.x, t.y);
     }
@@ -249,7 +270,7 @@
 
     const toScreen = (x, y) => [V.w / 2 + (x - cx) * sc, V.h / 2 + (y - cy) * sc];
     for (const s of S.shrines) { const [x, y] = toScreen(s.x, s.y); indicator(ctx, V, x, y, G.SHRINES[s.k].icon, G.SHRINES[s.k].color); }
-    for (const k of S.pickups) if (k.k === 'chest') { const [x, y] = toScreen(k.x, k.y); indicator(ctx, V, x, y, '🎁', '#ffd75a'); }
+    for (const k of S.pickups) if (k.k === 'chest') { const [x, y] = toScreen(k.x, k.y); indicator(ctx, V, x, y, null, '#e3ba52'); }
 
     const j = V.joy;
     if (j) {
