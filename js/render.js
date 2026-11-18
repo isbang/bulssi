@@ -438,7 +438,8 @@
     if (j) {
       ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(j.ox, j.oy, 48, 0, TAU); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.arc(j.x, j.y, 20, 0, TAU); ctx.fill();
+      const jx = j.x - j.ox, jy = j.y - j.oy, jk = Math.min(1, 48 / (Math.hypot(jx, jy) || 1));
+      ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.arc(j.ox + jx * jk, j.oy + jy * jk, 20, 0, TAU); ctx.fill();
     }
   };
 

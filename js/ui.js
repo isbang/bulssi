@@ -79,8 +79,6 @@
     const j = V.joy;
     if (!j || j.id !== e.pointerId) return;
     j.x = e.clientX - V.ox; j.y = e.clientY - V.oy;
-    const dx = j.x - j.ox, dy = j.y - j.oy, d = Math.hypot(dx, dy);
-    if (d > 48) { j.ox = j.x - dx / d * 48; j.oy = j.y - dy / d * 48; }
   });
   const release = e => { if (V.joy && V.joy.id === e.pointerId) V.joy = null; };
   cv.addEventListener('pointerup', release);
