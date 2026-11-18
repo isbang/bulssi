@@ -386,7 +386,7 @@
         hurt(S, e, L.dmg, L.kb, p.x, p.y, 'nova');
         if (L.burn && !e.dead) { e.burn = 3; e.burnDps = L.dmg * .4 * S.dyn; }
       });
-      S.fx.push({ k: 'ring', x: p.x, y: p.y, r: r, t: 0, d: .35, color: '#ff9a3c' });
+      S.fx.push({ k: 'breath', x: p.x, y: p.y, r: r, t: 0, d: .4 });
     },
     lance(S, w, L) {
       const p = S.p, len = L.len * S.st.area, t = nearest(S, p.x, p.y, len + 40);
@@ -553,7 +553,7 @@
   function activateShrine(S, s) {
     const p = S.p;
     s.dead = true;
-    S.fx.push({ k: 'ring', x: s.x, y: s.y, r: 120, t: 0, d: .5, color: G.SHRINES[s.k].color });
+    S.fx.push({ k: 'shrine', s: s.k, x: s.x, y: s.y, r: 120, t: 0, d: .95 });
     ev(S, 'sfx', 'chest');
     if (s.k === 'heal') { p.hp = Math.min(S.st.maxHp, p.hp + S.st.maxHp * .5); ev(S, 'toast', '치유의 샘. 체력을 되찾았다.'); }
     else if (s.k === 'wisdom') { gainXp(S, (p.xpNext - p.xp) / S.st.xp + .01); ev(S, 'toast', '지식의 돌. 한 단계 자랐다.'); }

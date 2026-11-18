@@ -385,12 +385,33 @@
     ctx.globalAlpha = 1;
   }
 
+  const DANGER = '#ff4058';
   function bullets(ctx, S, time) {
-    for (const b of S.bullets) piece(ctx, ROSE, () => starPath(ctx, b.x, b.y, 8.5, 3.6, 4, time * 5 + b.x * .05));
-    ctx.fillStyle = CREAM; ctx.beginPath();
-    for (const b of S.bullets) { ctx.moveTo(b.x + 2.4, b.y); ctx.arc(b.x, b.y, 2.4, 0, TAU); }
-    ctx.fill();
+    const each = fn => { ctx.beginPath(); for (const b of S.bullets) fn(b); ctx.fill('evenodd'); };
+    ctx.globalAlpha = .5; ctx.fillStyle = DANGER;
+    each(b => { const v = Math.hypot(b.vx, b.vy) || 1; orient(ctx, b.x, b.y, b.vx / v, b.vy / v, [-4, 6, -24, 0, -4, -6]); });
+    ctx.globalAlpha = .6; ctx.fillStyle = INK;
+    each(b => { ctx.moveTo(b.x + 15, b.y + 2); ctx.arc(b.x + 1, b.y + 2, 14, 0, TAU); });
+    ctx.globalAlpha = 1; ctx.fillStyle = CREAM;
+    each(b => starPath(ctx, b.x, b.y, 12 + Math.sin(time * 12 + b.x * .1) * 1.5, 6.5, 4, time * 5 + b.x * .05));
+    ctx.fillStyle = DANGER;
+    each(b => { ctx.moveTo(b.x + 5.5, b.y); ctx.arc(b.x, b.y, 5.5, 0, TAU); });
   }
+
+  function petal(ctx, x, y, a, rb, rt, w, skew) {
+    const ca = Math.cos(a), sa = Math.sin(a), bx = x + ca * rb, by = y + sa * rb, tx = x + Math.cos(a + skew) * rt, ty = y + Math.sin(a + skew) * rt;
+    const mx = x + ca * (rb + (rt - rb) * .45), my = y + sa * (rb + (rt - rb) * .45);
+    ctx.moveTo(bx + sa * w * .5, by - ca * w * .5);
+    ctx.quadraticCurveTo(mx + sa * w, my - ca * w, tx, ty);
+    ctx.quadraticCurveTo(mx - sa * w, my + ca * w, bx - sa * w * .5, by + ca * w * .5);
+    ctx.quadraticCurveTo(bx - ca * w * .5, by - sa * w * .5, bx + sa * w * .5, by - ca * w * .5);
+  }
+  const SHRINE_FX = {
+    heal: [SKY, [8, 0, 2, 2.4, -2, 3.8, -5, 2.6, -6, 0, -5, -2.6, -2, -3.8, 2, -2.4]],
+    wisdom: ['#74c7a4', [7, 0, 0, 4, -7, 0, 0, -4]],
+    gamble: [GOLD, null],
+    pact: [ROSE, [8, 0, 1.5, 1.5, 0, 5, -1.5, 1.5, -8, 0, -1.5, -1.5, 0, -5, 1.5, -1.5]],
+  };
 
   function zones(ctx, S, time) {
     for (const z of S.zones) {
@@ -440,6 +461,30 @@
         const a = f.vx * .05 + f.t * 12, x = f.x, y = f.y + 90 * f.t * f.t;
         ctx.globalAlpha = fade; ctx.fillStyle = f.color;
         ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 4, y + Math.sin(a) * 4); ctx.lineTo(x + Math.cos(a + 2.2) * 3.4, y + Math.sin(a + 2.2) * 3.4); ctx.lineTo(x + Math.cos(a + 4.1) * 3.4, y + Math.sin(a + 4.1) * 3.4); ctx.fill();
+      } else if (f.k === 'breath') {
+        // 숨결: 불꽃 잎이 바깥으로 피어났다가 가늘어지며 사라진다.
+        const e = 1 - Math.pow(1 - Math.min(1, k / .55), 3), rt = f.r * (.3 + .7 * e), n = Math.max(9, Math.round(f.r / 11));
+        const thin = 1 - k * .65, w = rt * 2.4 / n * thin, rot = (hash(f.x | 0, f.y | 0) & 63) / 10, step = TAU / n;
+        ctx.globalAlpha = .16 * (1 - k); flat(ctx, EMBER, () => ctx.arc(f.x, f.y, f.r, 0, TAU));
+        piece(ctx, EMBER, () => { for (let i = 0; i < n; i++) petal(ctx, f.x, f.y, rot + i * step, rt * .5, rt, w, .28); }, fade);
+        flat(ctx, GOLD, () => { for (let i = 0; i < n; i++) petal(ctx, f.x, f.y, rot + (i + .5) * step, rt * .42, rt * .8, w * .7, .28); });
+        flat(ctx, CREAM, () => { for (let i = 0; i < n; i++) petal(ctx, f.x, f.y, rot + i * step, rt * .56, rt * .82, w * .32, .28); });
+      } else if (f.k === 'shrine') {
+        // 제단: 물결 고리 세 겹이 번지고, 종이 조각이 솟았다가 떨어진다.
+        const def = SHRINE_FX[f.s] || SHRINE_FX.heal, col = def[0];
+        for (let j = 0; j < 3; j++) {
+          const kk = (k - j * .16) / (1 - j * .16); if (kk <= 0 || kk >= 1) continue;
+          const R = f.r * (1 - Math.pow(1 - kk, 2.4)), wd = 5 * (1 - kk) + 1;
+          piece(ctx, j === 1 ? CREAM : col, () => { ctx.moveTo(f.x + R, f.y); ctx.arc(f.x, f.y, R, 0, TAU); ctx.moveTo(f.x + R - wd, f.y); ctx.arc(f.x, f.y, Math.max(0, R - wd), 0, TAU); }, 1 - kk * kk);
+        }
+        const t = f.t, sz = k < .7 ? 1 : (1 - k) / .3;
+        for (let i = 0; i < 11; i++) {
+          const h = hash(i * 7 + 3, f.x | 0), a = -Math.PI / 2 + (i - 5) * .24, v = 150 + (h & 63) * 1.6, vx = Math.cos(a) * v, vy = Math.sin(a) * v + 300 * t;
+          const x = f.x + vx * t, y = f.y - 10 + Math.sin(a) * v * t + 150 * t * t, s = Math.hypot(vx, vy) || 1, m = (1.7 + (h >> 6 & 3) * .3) * sz;
+          const c = i % 3 === 1 ? CREAM : col;
+          if (def[1]) piece(ctx, c, () => orient(ctx, x, y, vx / s * m, vy / s * m, def[1]));
+          else piece(ctx, c, () => starPath(ctx, x, y, 7 * m, 3 * m, 5, t * 6 + i));
+        }
       } else if (f.k === 'ring' && f.fill) {
         // 폭발: 톱니 별 세 겹이 튀어나왔다가 사라진다.
         const e = 1 - Math.pow(1 - Math.min(1, k / .4), 3), R = f.r * (.3 + .7 * e), rot = (hash(f.x | 0, f.y | 0) & 63) / 10, n = R > 55 ? 12 : 9;
