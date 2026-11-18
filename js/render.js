@@ -453,6 +453,7 @@
     ctx.globalAlpha = 1;
   }
 
+  ['fx/breath-1', 'fx/breath-2', 'fx/breath-3'].forEach(spr);
   function effects(ctx, S) {
     ctx.lineJoin = 'miter'; ctx.lineCap = 'butt'; ctx.miterLimit = 6;
     for (const f of S.fx) {
@@ -462,6 +463,15 @@
         ctx.globalAlpha = fade; ctx.fillStyle = f.color;
         ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 4, y + Math.sin(a) * 4); ctx.lineTo(x + Math.cos(a + 2.2) * 3.4, y + Math.sin(a + 2.2) * 3.4); ctx.lineTo(x + Math.cos(a + 4.1) * 3.4, y + Math.sin(a + 4.1) * 3.4); ctx.fill();
       } else if (f.k === 'breath') {
+        const fr = spr(k < .18 ? 'fx/breath-1' : k < .6 ? 'fx/breath-2' : 'fx/breath-3');
+        if (fr) {
+          const R = f.r * (k < .6 ? .35 + .65 * (1 - Math.pow(1 - k / .6, 2.2)) : 1 + (k - .6) * .25), sz = R * 2.06;
+          ctx.globalAlpha = .14 * (1 - k); flat(ctx, EMBER, () => ctx.arc(f.x, f.y, f.r, 0, TAU));
+          ctx.globalAlpha = k < .6 ? 1 : Math.min(1, (1 - k) / .3);
+          ctx.save(); ctx.translate(f.x, f.y); ctx.rotate((hash(f.x | 0, f.y | 0) & 63) / 10 + k * .5);
+          ctx.drawImage(fr.img, -sz / 2, -sz / 2, sz, sz); ctx.restore();
+          continue;
+        }
         // 숨결: 불꽃 잎이 바깥으로 피어났다가 가늘어지며 사라진다.
         const e = 1 - Math.pow(1 - Math.min(1, k / .55), 3), rt = f.r * (.3 + .7 * e), n = Math.max(9, Math.round(f.r / 11));
         const thin = 1 - k * .65, w = rt * 2.4 / n * thin, rot = (hash(f.x | 0, f.y | 0) & 63) / 10, step = TAU / n;
