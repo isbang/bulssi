@@ -65,52 +65,219 @@
     ctx.fill();
   }
 
-  function enemies(ctx, S, cx, cy, hw, hh) {
+  const circle = (ctx, x, y, r) => { ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, TAU); };
+
+  // pts 는 반지름 단위의 (앞, 옆) 좌표쌍. 겹치는 조각끼리 감는 방향이 다르면 nonzero 채우기에서
+  // 겹친 자리가 구멍으로 뚫리므로, 방향을 원(arc)과 같은 쪽으로 맞춰서 그린다.
+  function poly(ctx, e, ux, uy, pts) {
+    let area = 0;
+    const n = pts.length;
+    for (let i = 0; i < n; i += 2) area += pts[i] * pts[(i + 3) % n] - pts[(i + 2) % n] * pts[i + 1];
+    for (let k = 0; k < n; k += 2) {
+      const i = area >= 0 ? k : n - 2 - k;
+      const x = e.x + (ux * pts[i] - uy * pts[i + 1]) * e.r, y = e.y + (uy * pts[i] + ux * pts[i + 1]) * e.r;
+      if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+  }
+
+  const SHAPES = {
+    shade(ctx, e, ux, uy, t) {
+      const r = e.r, w = Math.sin(t * 6 + e.id) * r * .14, x = e.x, y = e.y;
+      ctx.moveTo(x - r, y); ctx.arc(x, y, r, Math.PI, 0);
+      ctx.lineTo(x + r, y + r * 1.05 + w); ctx.lineTo(x + r * .5, y + r * .6 - w); ctx.lineTo(x, y + r * 1.05 + w);
+      ctx.lineTo(x - r * .5, y + r * .6 - w); ctx.lineTo(x - r, y + r * 1.05 + w); ctx.closePath();
+    },
+    runner(ctx, e, ux, uy) { poly(ctx, e, ux, uy, [1.4, 0, -1, .85, -.45, 0, -1, -.85]); },
+    brute(ctx, e) {
+      poly(ctx, e, 1, 0, [-1, -.55, -.55, -1, .55, -1, 1, -.55, 1, 1, -1, 1]);
+      poly(ctx, e, 1, 0, [-.95, -.7, -1.3, -1.55, -.4, -.95]);
+      poly(ctx, e, 1, 0, [.95, -.7, 1.3, -1.55, .4, -.95]);
+    },
+    spitter(ctx, e, ux, uy) {
+      circle(ctx, e.x, e.y, e.r);
+      for (const s of [-.75, 0, .75]) poly(ctx, e, ux, uy, [-.75, s - .28, -1.6, s * 1.5, -.75, s + .28]);
+    },
+    splitter(ctx, e) { circle(ctx, e.x - e.r * .42, e.y, e.r * .74); circle(ctx, e.x + e.r * .42, e.y, e.r * .74); },
+    mite(ctx, e, ux, uy) { poly(ctx, e, ux, uy, [1.3, 0, -.8, .9, -.8, -.9]); },
+    charger(ctx, e, ux, uy) { poly(ctx, e, ux, uy, [1.5, 0, .2, .95, -1, .75, -.6, 0, -1, -.75, .2, -.95]); },
+    wisp(ctx, e, ux, uy, t) {
+      circle(ctx, e.x, e.y, e.r);
+      poly(ctx, e, ux, uy, [-.2, .9, -2.3, Math.sin(t * 9 + e.id) * .6, -.2, -.9]);
+    },
+    swarm(ctx, e, ux, uy, t) {
+      const f = .5 + .5 * Math.sin(t * 22 + e.id);
+      poly(ctx, e, ux, uy, [1, 0, -.1, .5, -.5, 1 + f, -.5, .4, -1, 0, -.5, -.4, -.5, -1 - f, -.1, -.5]);
+    },
+    warden(ctx, e, ux, uy, t) {
+      const k = .414;
+      poly(ctx, e, 1, 0, [-k, -1, k, -1, 1, -k, 1, k, k, 1, -k, 1, -1, k, -1, -k]);
+      for (let i = 0; i < 6; i++) { const a = t * .9 + i / 6 * TAU; poly(ctx, e, Math.cos(a), Math.sin(a), [1.25, 0, 1.45, .2, 1.65, 0, 1.45, -.2]); }
+    },
+    weaver(ctx, e, ux, uy, t) {
+      poly(ctx, e, 1, 0, [0, -1.2, 1, 0, 0, 1.2, -1, 0]);
+      for (let i = 0; i < 6; i++) { const a = (i + .5) / 6 * TAU + Math.sin(t * 5 + i) * .12; poly(ctx, e, Math.cos(a), Math.sin(a), [.5, .14, 1.9, 0, .5, -.14]); }
+    },
+    maw(ctx, e, ux, uy) {
+      const a = Math.atan2(uy, ux), m = e.st === 1 ? 1 : e.st === 2 ? .2 : .45;
+      ctx.moveTo(e.x, e.y); ctx.arc(e.x, e.y, e.r, a + m, a - m + TAU); ctx.closePath();
+    },
+  };
+
+  function eyes(ctx, e, ux, uy) {
+    const r = e.r, t = e.type, lx = e.x + ux * r * .18, ly = e.y + uy * r * .18;
+    if (t === 'shade' || t === 'brute') {
+      const er = r * (t === 'brute' ? .13 : .17);
+      circle(ctx, lx - r * .38, ly - r * .15, er); circle(ctx, lx + r * .38, ly - r * .15, er);
+    } else if (t === 'splitter') { circle(ctx, lx - r * .42, ly, r * .15); circle(ctx, lx + r * .42, ly, r * .15); }
+    else if (t === 'charger') for (const s of [-.4, .4]) circle(ctx, e.x + (ux * .35 - uy * s) * r, e.y + (uy * .35 + ux * s) * r, r * .15);
+    else if (t === 'runner' || t === 'mite') circle(ctx, e.x + ux * r * .25, e.y + uy * r * .25, r * .22);
+    else if (t === 'wisp') circle(ctx, e.x, e.y, r * .45);
+    else if (t === 'warden') circle(ctx, e.x, e.y, r * .44);
+    else if (t === 'weaver') for (const [x, y] of [[-.2, -.25], [.2, -.25], [-.42, .08], [.42, .08]]) circle(ctx, lx + x * r, ly + y * r, r * .1);
+    else if (t === 'maw') { const a = Math.atan2(uy, ux) - 1.5; circle(ctx, e.x + Math.cos(a) * r * .55, e.y + Math.sin(a) * r * .55, r * .13); }
+  }
+
+  function enemies(ctx, S, cx, cy, hw, hh, time) {
     const p = S.p, groups = {}, vis = [];
     for (const e of S.enemies) {
-      if (Math.abs(e.x - cx) > hw + e.r || Math.abs(e.y - cy) > hh + e.r) continue;
+      const m = e.r * 2.4;
+      if (Math.abs(e.x - cx) > hw + m || Math.abs(e.y - cy) > hh + m) continue;
+      const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
+      e.lx = dx / d; e.ly = dy / d;
+      if (e.type === 'swarm') { const v = Math.hypot(e.vx, e.vy) || 1; e.ux = e.vx / v; e.uy = e.vy / v; }
+      else if ((e.type === 'charger' || e.boss === 'maw') && e.st > 0) { e.ux = e.dx; e.uy = e.dy; }
+      else { e.ux = e.lx; e.uy = e.ly; }
       vis.push(e);
       (groups[e.type] || (groups[e.type] = [])).push(e);
     }
-    ctx.lineCap = 'round';
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (const e of vis) {
-      const wind = (e.type === 'charger' || e.boss === 'maw') && e.st === 1;
-      if (!wind) continue;
+      if (!((e.type === 'charger' || e.boss === 'maw') && e.st === 1)) continue;
       const len = e.boss ? 340 : 190;
-      ctx.strokeStyle = 'rgba(255,80,60,.35)'; ctx.lineWidth = e.r * 1.6;
+      ctx.strokeStyle = 'rgba(226,96,122,.35)'; ctx.lineWidth = e.r * 1.6;
       ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x + e.dx * len, e.y + e.dy * len); ctx.stroke();
+    }
+    if (groups.wisp) {
+      ctx.globalCompositeOperation = 'lighter';
+      for (const e of groups.wisp) glow(ctx, '#3f78b4', e.x, e.y, e.r * 2.6, .7);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    }
+    // 채우기보다 먼저 그려야 조각이 겹친 안쪽 선이 가려지고 바깥 테두리만 남는다.
+    ctx.lineWidth = 4;
+    for (const e of vis) {
+      if (!e.elite && !e.boss) continue;
+      ctx.strokeStyle = e.boss ? '#e2607a' : '#e3ba52';
+      ctx.beginPath(); SHAPES[e.type](ctx, e, e.ux, e.uy, time); ctx.stroke();
+      if (e.elite) {
+        ctx.fillStyle = '#0d1020'; ctx.fillRect(e.x - 16, e.y - e.r * 1.6 - 9, 32, 4);
+        ctx.fillStyle = '#e3ba52'; ctx.fillRect(e.x - 16, e.y - e.r * 1.6 - 9, 32 * Math.max(0, e.hp / e.maxHp), 4);
+      }
     }
     for (const type in groups) {
       ctx.fillStyle = G.ENEMIES[type].color;
       ctx.beginPath();
-      for (const e of groups[type]) { ctx.moveTo(e.x + e.r, e.y); ctx.arc(e.x, e.y, e.r, 0, TAU); }
+      for (const e of groups[type]) SHAPES[type](ctx, e, e.ux, e.uy, time);
       ctx.fill();
     }
     ctx.fillStyle = '#fff';
     ctx.beginPath();
-    for (const e of vis) if (e.flash > 0) { ctx.moveTo(e.x + e.r, e.y); ctx.arc(e.x, e.y, e.r, 0, TAU); }
+    for (const e of vis) if (e.flash > 0) SHAPES[e.type](ctx, e, e.ux, e.uy, time);
     ctx.fill();
-    ctx.fillStyle = S.freeze > 0 ? '#9fd8ff' : '#fff6d8';
+    ctx.fillStyle = S.freeze > 0 ? '#9fd8ff' : '#ece3cf';
     ctx.beginPath();
-    for (const e of vis) {
-      const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, er = Math.max(1.3, e.r * .17);
-      for (const s of [-1, 1]) {
-        const x = e.x + ux * e.r * .4 - uy * e.r * .36 * s, y = e.y + uy * e.r * .4 + ux * e.r * .36 * s;
-        ctx.moveTo(x + er, y); ctx.arc(x, y, er, 0, TAU);
-      }
-    }
+    for (const e of vis) eyes(ctx, e, e.lx, e.ly);
     ctx.fill();
-    ctx.lineWidth = 2;
-    for (const e of vis) {
-      if (!e.elite && !e.boss) continue;
-      ctx.strokeStyle = e.boss ? '#ff5a7a' : '#ffd75a';
-      ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 3, 0, TAU); ctx.stroke();
-      if (e.elite) {
-        ctx.fillStyle = '#000a'; ctx.fillRect(e.x - 16, e.y - e.r - 10, 32, 4);
-        ctx.fillStyle = '#ffd75a'; ctx.fillRect(e.x - 16, e.y - e.r - 10, 32 * Math.max(0, e.hp / e.maxHp), 4);
-      }
-    }
+    ctx.fillStyle = '#0d1020';
+    ctx.beginPath();
+    if (groups.spitter) for (const e of groups.spitter) circle(ctx, e.x + e.ux * e.r * .45, e.y + e.uy * e.r * .45, e.r * .4);
+    if (groups.warden) for (const e of groups.warden) circle(ctx, e.x + e.lx * e.r * .18, e.y + e.ly * e.r * .18, e.r * .2);
+    ctx.fill();
   }
+
+  function flame(ctx, x, y, s, time, outer, mid, core) {
+    const fl = Math.sin(time * 13) * 2.5 * s, sway = Math.sin(time * 5) * 3 * s;
+    ctx.fillStyle = outer;
+    ctx.beginPath(); ctx.moveTo(x - 8 * s, y - 2 * s); ctx.quadraticCurveTo(x + sway, y - 27 * s - fl, x + 8 * s, y - 2 * s); ctx.fill();
+    ctx.fillStyle = mid; ctx.beginPath(); ctx.arc(x, y, 9 * s, 0, TAU); ctx.fill();
+    ctx.fillStyle = core; ctx.beginPath(); ctx.arc(x, y + s, 5 * s, 0, TAU); ctx.fill();
+  }
+  const path = (ctx, x, y, pts) => {
+    ctx.beginPath();
+    for (let i = 0; i < pts.length; i += 2) ctx.lineTo(x + pts[i], y + pts[i + 1]);
+    ctx.closePath(); ctx.fill();
+  };
+
+  const PLAYER = {
+    ember: { glow: '#ff8a2a', draw(ctx, x, y, t) { flame(ctx, x, y, 1, t, '#ff7a1a', '#ffb347', '#fff3c4'); } },
+    firefly: {
+      glow: '#b9d94a',
+      draw(ctx, x, y, t) {
+        const f = Math.sin(t * 30) * 3;
+        ctx.fillStyle = 'rgba(236,227,207,.55)';
+        path(ctx, x, y, [-2, -5, -15, -11 + f, -11, -1]); path(ctx, x, y, [2, -5, 15, -11 + f, 11, -1]);
+        ctx.fillStyle = '#3a3324'; ctx.beginPath(); ctx.ellipse(x, y - 4, 4.5, 6, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#d9f26a'; ctx.beginPath(); ctx.arc(x, y + 5, 6.5, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#fbffd9'; ctx.beginPath(); ctx.arc(x, y + 5, 3.2, 0, TAU); ctx.fill();
+      },
+    },
+    coal: {
+      glow: '#ff5a2a',
+      draw(ctx, x, y, t) {
+        flame(ctx, x, y - 8, .55, t, '#ff7a1a', '#ffb347', '#fff3c4');
+        ctx.fillStyle = '#322b33'; path(ctx, x, y, [-11, -3, -6, -10, 5, -11, 12, -4, 10, 7, 2, 11, -8, 9]);
+        ctx.strokeStyle = '#ff7a1a'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x - 6, y - 2); ctx.lineTo(x - 1, y + 2); ctx.lineTo(x + 2, y - 3); ctx.lineTo(x + 7, y + 3); ctx.moveTo(x - 1, y + 2); ctx.lineTo(x - 2, y + 7); ctx.stroke();
+      },
+    },
+    candle: {
+      glow: '#ffb347',
+      draw(ctx, x, y, t) {
+        flame(ctx, x, y - 9, .6, t, '#ff7a1a', '#ffb347', '#fff3c4');
+        ctx.fillStyle = '#ece3cf'; ctx.fillRect(x - 5.5, y - 5, 11, 17);
+        ctx.fillStyle = '#c9bea4'; ctx.fillRect(x + 2, y - 5, 3.5, 17);
+        ctx.fillStyle = '#ece3cf'; ctx.fillRect(x - 7.5, y - 1, 3, 5);
+      },
+    },
+    bolt: {
+      glow: '#6aa8ff',
+      draw(ctx, x, y, t) {
+        const j = Math.sin(t * 40) > .3 ? 1 : 0;
+        ctx.fillStyle = '#9fd0ff'; ctx.beginPath(); ctx.arc(x, y, 10, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#fff6b0'; path(ctx, x, y, [3, -16 - j, -7, 1, -1, 1, -4, 15 + j, 8, -3, 1, -3]);
+      },
+    },
+    kiln: {
+      glow: '#ff7a2a',
+      draw(ctx, x, y, t) {
+        flame(ctx, x, y - 7, .7, t, '#ff7a1a', '#ffb347', '#fff3c4');
+        ctx.fillStyle = '#8a5a3c'; path(ctx, x, y, [-11, -5, 11, -5, 8, 11, -8, 11]);
+        ctx.fillStyle = '#6b432b'; ctx.fillRect(x - 12.5, y - 7, 25, 4);
+        ctx.fillStyle = '#ff9a3c'; ctx.fillRect(x - 4, y + 2, 8, 5);
+      },
+    },
+    crescent: {
+      glow: '#9db4f0',
+      draw(ctx, x, y, t) {
+        const a = Math.sin(t * 1.5) * .15 - .5;
+        ctx.fillStyle = '#f3ecd2';
+        ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU);
+        ctx.moveTo(x + Math.cos(a) * 5 + 9.5, y + Math.sin(a) * 5); ctx.arc(x + Math.cos(a) * 5, y + Math.sin(a) * 5, 9.5, 0, TAU);
+        ctx.fill('evenodd');
+      },
+    },
+    meteor: {
+      glow: '#ffb347',
+      draw(ctx, x, y, t) {
+        ctx.fillStyle = '#ff8a2a'; path(ctx, x, y, [-7, -3, -20, -24 + Math.sin(t * 12) * 2, -1, -8]);
+        ctx.fillStyle = '#ffb347'; path(ctx, x, y, [-5, -3, -13, -16, -1, -6]);
+        ctx.fillStyle = '#ffe9a8';
+        const pts = [], rot = t * 1.2;
+        for (let i = 0; i < 8; i++) { const a = rot + i / 8 * TAU, r = i % 2 ? 4.5 : 12; pts.push(Math.cos(a) * r, Math.sin(a) * r); }
+        path(ctx, x, y, pts);
+      },
+    },
+  };
 
   function zones(ctx, S, time) {
     for (const z of S.zones) {
@@ -173,6 +340,7 @@
 
   G.render = function (ctx, S, V) {
     const p = S.p, time = V.time, sc = V.scale;
+    const look = PLAYER[S.char.id] || PLAYER.ember;
     let cx = p.x, cy = p.y;
     if (S.shake > 0) { cx += Math.sin(time * 90) * S.shake * 14; cy += Math.cos(time * 77) * S.shake * 14; }
     const hw = V.w / 2 / sc, hh = V.h / 2 / sc;
@@ -216,12 +384,12 @@
       pickup(ctx, k.k, k.x, k.y + bob);
     }
 
-    enemies(ctx, S, cx, cy, hw, hh);
+    enemies(ctx, S, cx, cy, hw, hh, time);
 
     ctx.globalCompositeOperation = 'lighter';
     for (const s of S.shots) glow(ctx, s.k === 'spark' ? '#ff9a3c' : '#5a86c8', s.x, s.y, s.k === 'spark' ? 15 : s.r * 2, .9);
     for (const w of S.weapons) for (let i = 0; i < w.orbs.length; i += 2) glow(ctx, '#ffd27a', w.orbs[i], w.orbs[i + 1], 22 * S.st.area, 1);
-    glow(ctx, '#ff8a2a', p.x, p.y, 52 + Math.sin(time * 7) * 4, .6);
+    glow(ctx, look.glow, p.x, p.y, 52 + Math.sin(time * 7) * 4, .6);
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
 
     for (const s of S.shots) {
@@ -231,13 +399,7 @@
     ctx.fillStyle = '#fff3c4';
     for (const w of S.weapons) for (let i = 0; i < w.orbs.length; i += 2) { ctx.beginPath(); ctx.arc(w.orbs[i], w.orbs[i + 1], 5 * S.st.area, 0, TAU); ctx.fill(); }
 
-    if (p.iframes <= 0 || Math.floor(time * 20) % 2) {
-      const fl = Math.sin(time * 13) * 2.5, sway = Math.sin(time * 5) * 3;
-      ctx.fillStyle = '#ff7a1a';
-      ctx.beginPath(); ctx.moveTo(p.x - 8, p.y - 2); ctx.quadraticCurveTo(p.x + sway, p.y - 27 - fl, p.x + 8, p.y - 2); ctx.fill();
-      ctx.fillStyle = '#ffb347'; ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#fff3c4'; ctx.beginPath(); ctx.arc(p.x, p.y + 1, 5, 0, TAU); ctx.fill();
-    }
+    if (p.iframes <= 0 || Math.floor(time * 20) % 2) look.draw(ctx, p.x, p.y, time);
     ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(p.x - 18, p.y + 16, 36, 5);
     ctx.fillStyle = p.hp / S.st.maxHp < .3 ? '#ff4a4a' : '#6fe07a'; ctx.fillRect(p.x - 17, p.y + 17, 34 * Math.max(0, p.hp / S.st.maxHp), 3);
 
