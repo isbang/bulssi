@@ -17,7 +17,10 @@
   const fmt = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
   const unlocked = c => !c.unlock || save[c.unlock.key] >= c.unlock.val;
   const show = (id, on) => $(id).classList.toggle('hidden', !on);
-  const seal = (glyph, kind, cls) => `<span class="seal ${kind} ${cls || ''}">${glyph}</span>`;
+  // 그림이 없는 환경(단일 파일 빌드 등)에서는 글자 도장으로 되돌아간다.
+  const seal = (glyph, kind, cls, id) => id
+    ? `<span class="seal art ${cls || ''}"><img src="assets/icons/${kind}-${id}.png" alt="" onerror="this.parentNode.className='seal ${kind} ${cls || ''}';this.replaceWith('${glyph}')"></span>`
+    : `<span class="seal ${kind} ${cls || ''}">${glyph}</span>`;
 
   // ── 소리 ──
   let ac = null;
@@ -111,7 +114,7 @@
     }
     const c = G.CHARS.find(x => x.id === save.char) || G.CHARS[0], ok = unlocked(c), w = G.WEAPONS[c.weapon];
     $('charInfo').innerHTML = ok
-      ? `<img src="assets/chars/${c.id}.png" alt=""><div><h3>${c.name}</h3><p>${c.desc}</p><p class="wp">${seal(w.icon, 'w', 'sm')}<span><b>${w.name}</b>${w.desc}</span></p></div>`
+      ? `<img src="assets/chars/${c.id}.png" alt=""><div><h3>${c.name}</h3><p>${c.desc}</p><p class="wp">${seal(w.icon, 'w', 'sm', c.weapon)}<span><b>${w.name}</b>${w.desc}</span></p></div>`
       : `<img class="locked" src="assets/chars/${c.id}.png" alt=""><div><h3>${c.name}</h3><p>아직 잠겨 있다. ${c.unlock.text}.</p></div>`;
     $('startBtn').disabled = !ok;
     show('depthRow', save.maxDepth > 0);
@@ -172,7 +175,7 @@
       const b = document.createElement('button');
       const cls = o.tag === '각성' ? 'awk' : o.tag === '유물' ? 'relic' : o.tag.startsWith('새') ? 'new' : '';
       b.className = 'card';
-      b.innerHTML = `${seal(o.icon, o.kind)}<div><div class="nm">${o.name}<span class="tag ${cls}">${o.tag}</span></div><div class="ds">${o.desc}</div></div>`;
+      b.innerHTML = `${seal(o.icon, o.kind, '', o.id)}<div><div class="nm">${o.name}<span class="tag ${cls}">${o.tag}</span></div><div class="ds">${o.desc}</div></div>`;
       b.onclick = () => { G.choose(S, i); choiceOpen = false; show('choice', false); };
       box.appendChild(b);
     });

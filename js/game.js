@@ -594,14 +594,14 @@
     for (const id in G.WEAPONS) {
       const d = G.WEAPONS[id], w = S.weapons.find(x => x.id === id);
       if (w) {
-        if (w.lvl < 6) pool.push({ w: w.lvl === 5 ? 2.2 : 1.7, kind: 'w', icon: d.icon, name: d.name, tag: w.lvl === 5 ? '각성' : 'Lv ' + (w.lvl + 1), desc: d.up[w.lvl], fn: () => { w.lvl++; } });
-      } else if (S.weapons.length < 4) pool.push({ w: 1, kind: 'w', icon: d.icon, name: d.name, tag: '새 무기', desc: d.desc, fn: () => addWeapon(S, id) });
+        if (w.lvl < 6) pool.push({ w: w.lvl === 5 ? 2.2 : 1.7, kind: 'w', id, icon: d.icon, name: d.name, tag: w.lvl === 5 ? '각성' : 'Lv ' + (w.lvl + 1), desc: d.up[w.lvl], fn: () => { w.lvl++; } });
+      } else if (S.weapons.length < 4) pool.push({ w: 1, kind: 'w', id, icon: d.icon, name: d.name, tag: '새 무기', desc: d.desc, fn: () => addWeapon(S, id) });
     }
     for (const id in G.PASSIVES) {
       const d = G.PASSIVES[id], ps = S.passives.find(x => x.id === id);
       if (ps) {
-        if (ps.lvl < d.max) pool.push({ w: 1.4, kind: 'p', icon: d.icon, name: d.name, tag: 'Lv ' + (ps.lvl + 1), desc: d.desc, fn: () => { ps.lvl++; } });
-      } else if (S.passives.length < 5) pool.push({ w: 1, kind: 'p', icon: d.icon, name: d.name, tag: '새 능력', desc: d.desc, fn: () => S.passives.push({ id, lvl: 1 }) });
+        if (ps.lvl < d.max) pool.push({ w: 1.4, kind: 'p', id, icon: d.icon, name: d.name, tag: 'Lv ' + (ps.lvl + 1), desc: d.desc, fn: () => { ps.lvl++; } });
+      } else if (S.passives.length < 5) pool.push({ w: 1, kind: 'p', id, icon: d.icon, name: d.name, tag: '새 능력', desc: d.desc, fn: () => S.passives.push({ id, lvl: 1 }) });
     }
     const out = [], n = 3 + S.mod.choices + (S.has.clover ? 1 : 0);
     while (out.length < n && pool.length) { const o = wpick(S.rng, pool); pool.splice(pool.indexOf(o), 1); out.push(o); }
@@ -609,13 +609,13 @@
     return out;
   }
 
-  const healOpt = S => ({ kind: 'h', icon: '쉼', name: '숨 고르기', tag: '회복', desc: '체력을 30% 회복한다', fn: () => { S.p.hp = Math.min(S.st.maxHp, S.p.hp + S.st.maxHp * .3); } });
+  const healOpt = S => ({ kind: 'h', id: 'rest', icon: '쉼', name: '숨 고르기', tag: '회복', desc: '체력을 30% 회복한다', fn: () => { S.p.hp = Math.min(S.st.maxHp, S.p.hp + S.st.maxHp * .3); } });
 
   function openChoice(S, kind) {
     if (kind === 'level') S.choice = { kind, title: '레벨 ' + S.p.level, opts: levelOpts(S) };
     else {
       const ids = shuffle(S.rng, Object.keys(G.RELICS).filter(id => !S.has[id])).slice(0, 3);
-      const opts = ids.map(id => { const d = G.RELICS[id]; return { kind: 'r', icon: d.icon, name: d.name, tag: '유물', desc: d.desc, fn: () => addRelic(S, id) }; });
+      const opts = ids.map(id => { const d = G.RELICS[id]; return { kind: 'r', id, icon: d.icon, name: d.name, tag: '유물', desc: d.desc, fn: () => addRelic(S, id) }; });
       if (!opts.length) opts.push(healOpt(S));
       S.choice = { kind, title: '유물을 주웠다', opts };
     }
