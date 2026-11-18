@@ -63,7 +63,9 @@
     for (let m = 0; m < 30; m++) {
       const avail = shuffle(r, ORDER.filter((_, i) => i <= m));
       const k = m === 0 ? 1 : m < 3 ? 2 : 3;
-      S.waves.push(avail.slice(0, k).map((type, i) => ({ type, w: 3 - i })));
+      const pick = avail.slice(0, k), si = pick.indexOf('spitter');
+      if (si >= 0 && pick.length > 1) { pick.splice(si, 1); pick.push('spitter'); }
+      S.waves.push(pick.map((type, i) => ({ type, w: 3 - i })));
     }
     const sc = [];
     for (let t = 70 + r() * 20; t < 700; t += (85 + r() * 30) / S.mod.eliteRate) sc.push({ t, k: 'elite' });
@@ -280,8 +282,8 @@
     } else { p.hp = 0; S.over = 'dead'; ev(S, 'sfx', 'dead'); }
   }
 
-  function bullet(S, x, y, dx, dy, spd, dmg) {
-    if (S.bullets.length < 260) S.bullets.push({ x, y, vx: dx * spd, vy: dy * spd, r: 6, dmg, life: 6 });
+  function bullet(S, x, y, dx, dy, spd, dmg, life) {
+    if (S.bullets.length < 260) S.bullets.push({ x, y, vx: dx * spd, vy: dy * spd, r: 6, dmg, life: life || 4.5, big: !life });
   }
 
   function ringShot(S, e, n, spd, off) {
@@ -348,7 +350,7 @@
           if (d > 190) { e.x += dx * sp * dt; e.y += dy * sp * dt; }
           else if (d < 140) { e.x -= dx * sp * .6 * dt; e.y -= dy * sp * .6 * dt; }
           e.stT -= dt;
-          if (e.stT <= 0 && d < 340) { e.stT = 2.8; bullet(S, e.x, e.y, dx, dy, 120, e.dmg); }
+          if (e.stT <= 0 && d < 340) { e.stT = 3.2; bullet(S, e.x, e.y, dx, dy, 120, e.dmg, 3.2); }
         } else if (e.type === 'swarm') {
           e.x += e.vx * dt; e.y += e.vy * dt; e.life -= dt;
           if (e.life <= 0) e.dead = true;
@@ -668,8 +670,13 @@
     if (alive < 230) {
       S.spawnAcc += rate * dt;
       const wave = S.waves[Math.min(S.waves.length - 1, Math.floor(min))];
+      // 쏘는 적은 동시에 몇 마리까지만 둔다. 상한을 없애면 후반에 수십 마리가 쌓여 탄막 피하기 게임이 된다.
+      let spit = 0; for (const e of S.enemies) if (e.type === 'spitter' && !e.dead) spit++;
+      const spitCap = Math.min(6, 3 + Math.floor(min / 4));
       while (S.spawnAcc > 0) {
-        const type = wpick(S.rng, wave).type, [x, y] = around(S, S.viewR + 20 + S.rng() * 60);
+        let type = wpick(S.rng, wave).type;
+        if (type === 'spitter' && ++spit > spitCap) type = (wave.find(w => w.type !== 'spitter') || { type: 'shade' }).type;
+        const [x, y] = around(S, S.viewR + 20 + S.rng() * 60);
         S.spawnAcc -= G.ENEMIES[type].cost;
         spawn(S, type, x, y);
       }

@@ -405,6 +405,16 @@
   const DANGER = '#ff4058';
   function bullets(ctx, S, time) {
     const each = fn => { ctx.beginPath(); for (const b of S.bullets) fn(b); ctx.fill('evenodd'); };
+    const sh = spr('fx/shot'), bu = spr('fx/burr');
+    if (sh && bu) {
+      ctx.globalAlpha = 1;
+      for (const b of S.bullets) {
+        const z = 1 + Math.sin(time * 12 + b.x * .1) * .08;
+        if (b.big) img(ctx, bu, b.x, b.y, 26 * z, 26 * z, time * 4 + b.x * .05);
+        else img(ctx, sh, b.x, b.y, 34 * z, 34 * z, Math.atan2(b.vy, b.vx), .68);
+      }
+      return;
+    }
     ctx.globalAlpha = .5; ctx.fillStyle = DANGER;
     each(b => { const v = Math.hypot(b.vx, b.vy) || 1; orient(ctx, b.x, b.y, b.vx / v, b.vy / v, [-4, 6, -24, 0, -4, -6]); });
     ctx.globalAlpha = .6; ctx.fillStyle = INK;
@@ -476,7 +486,7 @@
     ctx.globalAlpha = 1;
   }
 
-  ['breath-1', 'breath-2', 'breath-3', 'burst-1', 'burst-2', 'burst-3', 'burstr-1', 'burstr-2', 'burstr-3', 'spark', 'crescent', 'mine', 'star', 'starr', 'impact', 'gem-1', 'gem-2', 'gem-3', 'drop', 'beam', 'bolt', 'fire'].forEach(n => spr('fx/' + n));
+  ['breath-1', 'breath-2', 'breath-3', 'burst-1', 'burst-2', 'burst-3', 'burstr-1', 'burstr-2', 'burstr-3', 'spark', 'crescent', 'mine', 'star', 'starr', 'impact', 'shot', 'burr', 'gem-1', 'gem-2', 'gem-3', 'drop', 'beam', 'bolt', 'fire'].forEach(n => spr('fx/' + n));
   function effects(ctx, S) {
     ctx.lineJoin = 'miter'; ctx.lineCap = 'butt'; ctx.miterLimit = 6;
     for (const f of S.fx) {
