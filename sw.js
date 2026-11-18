@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'bulssi-v5';
+const CACHE = 'bulssi-v6';
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'js/data.js', 'js/game.js', 'js/render.js', 'js/ui.js', 'icons/icon-192.png', 'icons/icon-512.png',

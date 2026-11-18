@@ -43,12 +43,12 @@
       st: null, dyn: 1, has: {}, weapons: [], passives: [], relics: [],
       enemies: [], shots: [], bullets: [], gems: [], pickups: [], zones: [], shrines: [], fx: [], texts: [],
       grid: Array.from({ length: GN * GN }, () => []), gx0: 0, gy0: 0,
-      kills: 0, bossKills: 0, curse: 0, rerolls: 0, queue: [], choice: null, over: null, ev: [],
+      kills: 0, dmg: {}, bossKills: 0, curse: 0, rerolls: 0, queue: [], choice: null, over: null, ev: [],
       spawnAcc: 0, nextId: 1, viewR: 480, shake: 0, hurtFlash: 0, freeze: 0,
       tFreeze: 30, tCollect: 20, tMeteor: 4, revived: false, boss: null, finalUp: false,
     };
     S.rerolls = S.mod.rerolls;
-    addWeapon(S, S.char.weapon);
+    addWeapon(S, o.weapon || S.char.weapon);
     recalc(S);
     S.p.hp = S.st.maxHp;
     plan(S);
@@ -217,11 +217,12 @@
     return best;
   }
 
-  function hurt(S, e, dmg, kb, ax, ay) {
+  function hurt(S, e, dmg, kb, ax, ay, src) {
     if (e.dead) return;
     let d = dmg * S.dyn;
     const crit = S.rng() < S.st.crit;
     if (crit) d *= 2;
+    S.dmg[src] = (S.dmg[src] || 0) + Math.min(d, e.hp);
     e.hp -= d; e.flash = .1;
     if (S.has.frost && S.rng() < .25) e.slow = 2;
     if (kb && !e.boss) {
@@ -261,7 +262,7 @@
     } else if (r() < .008 * S.mod.healDrop) S.pickups.push({ k: 'heal', x: e.x, y: e.y });
     else if (r() < .002) S.pickups.push({ k: 'magnet', x: e.x, y: e.y });
     if (S.has.hungry) p.hp = Math.min(S.st.maxHp, p.hp + .4);
-    if (S.has.blast && r() < .12) S.zones.push({ k: 'blast', x: e.x, y: e.y, r: 62 * S.st.area, dmg: 18 + S.t / 30, delay: .08 });
+    if (S.has.blast && r() < .12) S.zones.push({ k: 'blast', x: e.x, y: e.y, r: 62 * S.st.area, dmg: 18 + S.t / 30, delay: .08, src: 'relic' });
   }
 
   function hitPlayer(S, dmg) {
@@ -270,11 +271,11 @@
     p.hp -= Math.max(1, dmg * S.st.taken - S.st.armor);
     p.iframes = .45; S.shake = .25; S.hurtFlash = .35;
     ev(S, 'sfx', 'hurt');
-    if (S.has.thorns) S.zones.push({ k: 'blast', x: p.x, y: p.y, r: 95, dmg: 25 + S.t / 20, delay: 0, kb: 260 });
+    if (S.has.thorns) S.zones.push({ k: 'blast', x: p.x, y: p.y, r: 95, dmg: 25 + S.t / 20, delay: 0, kb: 260, src: 'relic' });
     if (p.hp > 0) return;
     if (S.has.second && !S.revived) {
       S.revived = true; p.hp = S.st.maxHp * .5; p.iframes = 2.5;
-      S.zones.push({ k: 'blast', x: p.x, y: p.y, r: 220, dmg: 80 + S.t / 6, delay: 0, kb: 420 });
+      S.zones.push({ k: 'blast', x: p.x, y: p.y, r: 220, dmg: 80 + S.t / 6, delay: 0, kb: 420, src: 'relic' });
       ev(S, 'toast', '두 번째 숨. 다시 타오른다.'); ev(S, 'sfx', 'level');
     } else { p.hp = 0; S.over = 'dead'; ev(S, 'sfx', 'dead'); }
   }
@@ -329,7 +330,7 @@
     for (const e of S.enemies) {
       if (e.dead) continue;
       e.flash -= dt; e.t += dt;
-      if (e.burn > 0) { e.burn -= dt; e.hp -= e.burnDps * dt; if (e.hp <= 0) { kill(S, e); continue; } }
+      if (e.burn > 0) { e.burn -= dt; S.dmg.nova = (S.dmg.nova || 0) + Math.min(e.burnDps * dt, e.hp); e.hp -= e.burnDps * dt; if (e.hp <= 0) { kill(S, e); continue; } }
       let dx = p.x - e.x, dy = p.y - e.y;
       const d = Math.hypot(dx, dy) || 1;
       dx /= d; dy /= d;
@@ -382,7 +383,7 @@
     nova(S, w, L) {
       const p = S.p, r = L.rad * S.st.area;
       near(S, p.x, p.y, r, e => {
-        hurt(S, e, L.dmg, L.kb, p.x, p.y);
+        hurt(S, e, L.dmg, L.kb, p.x, p.y, 'nova');
         if (L.burn && !e.dead) { e.burn = 3; e.burnDps = L.dmg * .4 * S.dyn; }
       });
       S.fx.push({ k: 'ring', x: p.x, y: p.y, r: r, t: 0, d: .35, color: '#ff9a3c' });
@@ -397,7 +398,7 @@
           if (e.dead) continue;
           const rx = e.x - p.x, ry = e.y - p.y, along = rx * ux + ry * uy;
           if (along < -e.r || along > len + e.r) continue;
-          if (Math.abs(rx * uy - ry * ux) < half + e.r) hurt(S, e, L.dmg, 60, p.x, p.y);
+          if (Math.abs(rx * uy - ry * ux) < half + e.r) hurt(S, e, L.dmg, 60, p.x, p.y, 'lance');
         }
         S.fx.push({ k: 'beam', x: p.x, y: p.y, x2: p.x + ux * len, y2: p.y + uy * len, w: half * 2, t: 0, d: .22 });
       }
@@ -407,7 +408,7 @@
       const p = S.p, n = L.n + S.st.amount;
       for (let i = 0; i < n; i++) {
         const a = S.rng() * TAU, o = i ? 50 : 0;
-        S.zones.push({ k: 'mine', x: p.x + Math.cos(a) * o, y: p.y + Math.sin(a) * o, r: L.rad * S.st.area, dmg: L.dmg, arm: .35, life: 4.5, fire: L.fire });
+        S.zones.push({ k: 'mine', x: p.x + Math.cos(a) * o, y: p.y + Math.sin(a) * o, r: L.rad * S.st.area, dmg: L.dmg, arm: .35, life: 4.5, fire: L.fire, src: 'mine' });
       }
     },
     chain(S, w, L) {
@@ -420,7 +421,7 @@
           used.push(cur); pts.push(cur.x, cur.y);
           if (L.stun) cur.stun = L.stun;
           const from = cur;
-          hurt(S, cur, L.dmg, 0);
+          hurt(S, cur, L.dmg, 0, 0, 0, 'chain');
           cur = nearest(S, from.x, from.y, L.range * S.st.area, used);
         }
         S.fx.push({ k: 'bolt', pts, t: 0, d: .18 });
@@ -443,7 +444,7 @@
       if (!c.length) return false;
       for (let i = 0; i < L.n + S.st.amount; i++) {
         const t = c[Math.floor(S.rng() * c.length)];
-        S.zones.push({ k: 'meteor', x: t.x, y: t.y, r: L.rad * S.st.area, dmg: L.dmg, delay: .5, T: .5, stun: L.stun });
+        S.zones.push({ k: 'meteor', x: t.x, y: t.y, r: L.rad * S.st.area, dmg: L.dmg, delay: .5, T: .5, stun: L.stun, src: 'rain' });
       }
     },
   };
@@ -454,14 +455,14 @@
       const L = G.WEAPONS[w.id].lv[w.lvl - 1];
       if (w.id === 'orbit') {
         w.a += L.spd * dt;
-        const n = L.n + S.st.amount, or = 9 * S.st.area;
+        const n = L.n + S.st.amount, or = 12 * S.st.area;
         w.orbs.length = 0;
         for (let ring = 0; ring < (L.ring2 ? 2 : 1); ring++) {
           const rad = L.rad * S.st.area * (ring ? 1.75 : 1), a0 = ring ? -w.a * .8 : w.a;
           for (let i = 0; i < n; i++) {
             const a = a0 + i / n * TAU, ox = p.x + Math.cos(a) * rad, oy = p.y + Math.sin(a) * rad;
             w.orbs.push(ox, oy);
-            near(S, ox, oy, or, e => { if (S.t >= e.oh) { e.oh = S.t + L.tick; hurt(S, e, L.dmg, 70, p.x, p.y); } });
+            near(S, ox, oy, or, e => { if (S.t >= e.oh) { e.oh = S.t + L.tick; hurt(S, e, L.dmg, 70, p.x, p.y, 'orbit'); } });
           }
         }
         continue;
@@ -481,8 +482,8 @@
         near(S, s.x, s.y, s.r, e => {
           if (s.dead || s.hit.includes(e.id)) return;
           s.hit.push(e.id);
-          hurt(S, e, s.dmg, 40, s.x - s.vx, s.y - s.vy);
-          if (s.ex) S.zones.push({ k: 'blast', x: s.x, y: s.y, r: 38 * S.st.area, dmg: s.dmg * .6, delay: 0 });
+          hurt(S, e, s.dmg, 40, s.x - s.vx, s.y - s.vy, 'spark');
+          if (s.ex) S.zones.push({ k: 'blast', x: s.x, y: s.y, r: 48 * S.st.area, dmg: s.dmg * .6, delay: 0, src: 'spark' });
           if (s.pierce-- <= 0) s.dead = true;
         });
       } else {
@@ -499,7 +500,7 @@
         near(S, s.x, s.y, s.r, e => {
           if (s.hit.includes(e.id)) return;
           s.hit.push(e.id);
-          hurt(S, e, s.dmg * (s.back && s.ret2 ? 2 : 1), 50, s.x, s.y);
+          hurt(S, e, s.dmg * (s.back && s.ret2 ? 2 : 1), 50, s.x, s.y, 'boomerang');
         });
       }
     }
@@ -508,7 +509,7 @@
   function explode(S, z) {
     near(S, z.x, z.y, z.r, e => {
       if (z.stun) e.stun = z.stun;
-      hurt(S, e, z.dmg, z.kb || 110, z.x, z.y);
+      hurt(S, e, z.dmg, z.kb || 110, z.x, z.y, z.src);
     });
     if (z.pd && Math.hypot(S.p.x - z.x, S.p.y - z.y) < z.r + S.p.r) hitPlayer(S, z.pd);
     S.fx.push({ k: 'ring', x: z.x, y: z.y, r: z.r, t: 0, d: .3, color: z.pd ? '#ff5a4a' : '#ffb347', fill: true });
@@ -528,7 +529,7 @@
         if (trig) explode(S, z);
       } else if (z.k === 'fire') {
         z.dur -= dt; z.tick -= dt;
-        if (z.tick <= 0) { z.tick = .4; near(S, z.x, z.y, z.r, e => hurt(S, e, z.dmg * .2, 0)); }
+        if (z.tick <= 0) { z.tick = .4; near(S, z.x, z.y, z.r, e => hurt(S, e, z.dmg * .2, 0, 0, 0, z.src)); }
         if (z.dur <= 0) z.dead = true;
       } else { z.delay -= dt; if (z.delay <= 0) explode(S, z); }
     }
@@ -656,7 +657,7 @@
     if (S.mod.meteors && (S.tMeteor -= dt) <= 0) {
       S.tMeteor = Math.max(.7, 2.4 - min * .12);
       const a = S.rng() * TAU, r = S.rng() * 300;
-      S.zones.push({ k: 'omen', x: p.x + Math.cos(a) * r, y: p.y + Math.sin(a) * r, r: 70, dmg: 40 + min * 12, pd: 14 + min, delay: 1.3, T: 1.3 });
+      S.zones.push({ k: 'omen', x: p.x + Math.cos(a) * r, y: p.y + Math.sin(a) * r, r: 70, dmg: 40 + min * 12, pd: 14 + min, delay: 1.3, T: 1.3, src: 'omen' });
     }
 
     while (S.sched.length && S.sched[0].t <= S.t) doEvent(S, S.sched.shift());
@@ -695,7 +696,7 @@
     const p = S.p;
     let fx = 0, fy = 0;
     for (const e of S.enemies) {
-      const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1, R = e.boss ? 260 : 150;
+      const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1, R = (S.botR || 150) + (e.boss ? 110 : 0);
       if (d >= R) continue;
       const w = Math.pow((R - d) / R, 2) * (e.boss ? 4 : 1);
       fx -= dx / d * w; fy -= dy / d * w;

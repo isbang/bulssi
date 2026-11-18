@@ -17,31 +17,31 @@ G.WEAPONS = {
     name: '불티', icon: '티', desc: '가장 가까운 적에게 불티를 쏜다.',
     lv: [
       { dmg: 10, cd: .85, n: 1, pierce: 0 }, { dmg: 14, cd: .85, n: 1, pierce: 0 }, { dmg: 14, cd: .85, n: 2, pierce: 0 },
-      { dmg: 17, cd: .8, n: 2, pierce: 1 }, { dmg: 20, cd: .7, n: 3, pierce: 1 }, { dmg: 24, cd: .65, n: 3, pierce: 2, ex: true },
+      { dmg: 17, cd: .8, n: 2, pierce: 1 }, { dmg: 20, cd: .7, n: 3, pierce: 2 }, { dmg: 24, cd: .65, n: 3, pierce: 3, ex: true },
     ],
-    up: ['', '피해 +40%', '불티 +1', '관통 +1, 피해 증가', '불티 +1, 더 빠르게', '각성: 불티가 적중하면 폭발한다'],
+    up: ['', '피해 +40%', '불티 +1', '관통 +1, 피해 증가', '불티 +1, 관통 +1', '각성: 불티가 적중하면 폭발한다'],
   },
   orbit: {
     name: '맴도는 등불', icon: '등', desc: '등불이 주위를 돌며 닿는 적을 태운다.',
     lv: [
-      { dmg: 7, n: 2, rad: 58, spd: 3.2, tick: .45 }, { dmg: 7, n: 3, rad: 58, spd: 3.2, tick: .45 }, { dmg: 10, n: 3, rad: 66, spd: 3.4, tick: .45 },
-      { dmg: 10, n: 4, rad: 66, spd: 3.4, tick: .42 }, { dmg: 14, n: 4, rad: 72, spd: 4, tick: .4 }, { dmg: 16, n: 4, rad: 72, spd: 4, tick: .4, ring2: true },
+      { dmg: 9, n: 2, rad: 64, spd: 3.4, tick: .4 }, { dmg: 9, n: 3, rad: 64, spd: 3.4, tick: .4 }, { dmg: 13, n: 3, rad: 74, spd: 3.6, tick: .4 },
+      { dmg: 13, n: 4, rad: 74, spd: 3.6, tick: .36 }, { dmg: 18, n: 4, rad: 82, spd: 4.2, tick: .33 }, { dmg: 21, n: 4, rad: 82, spd: 4.2, tick: .33, ring2: true },
     ],
     up: ['', '등불 +1', '피해 증가, 궤도 확장', '등불 +1', '피해 증가, 더 빠르게', '각성: 바깥 궤도에 등불이 한 겹 더 돈다'],
   },
   nova: {
     name: '숨결', icon: '숨', desc: '주기적으로 주위를 밀어내는 열기를 내뿜는다.',
     lv: [
-      { dmg: 9, cd: 2.6, rad: 75, kb: 150 }, { dmg: 9, cd: 2.6, rad: 92, kb: 150 }, { dmg: 14, cd: 2.5, rad: 92, kb: 160 },
-      { dmg: 14, cd: 2.1, rad: 98, kb: 160 }, { dmg: 19, cd: 2.1, rad: 115, kb: 170 }, { dmg: 24, cd: 1.9, rad: 120, kb: 180, burn: true },
+      { dmg: 13, cd: 2.1, rad: 88, kb: 160 }, { dmg: 13, cd: 2.1, rad: 106, kb: 160 }, { dmg: 20, cd: 2, rad: 106, kb: 170 },
+      { dmg: 20, cd: 1.6, rad: 112, kb: 170 }, { dmg: 27, cd: 1.6, rad: 130, kb: 180 }, { dmg: 34, cd: 1.45, rad: 138, kb: 190, burn: true },
     ],
     up: ['', '범위 +20%', '피해 +50%', '쿨다운 감소', '범위·피해 증가', '각성: 맞은 적이 3초간 불탄다'],
   },
   lance: {
     name: '빛줄기', icon: '빛', desc: '가까운 적 방향으로 모든 것을 꿰뚫는 빛을 쏜다.',
     lv: [
-      { dmg: 16, cd: 1.9, len: 260, wid: 14, n: 1 }, { dmg: 22, cd: 1.9, len: 260, wid: 14, n: 1 }, { dmg: 22, cd: 1.8, len: 300, wid: 20, n: 1 },
-      { dmg: 24, cd: 1.8, len: 300, wid: 20, n: 2 }, { dmg: 31, cd: 1.6, len: 320, wid: 22, n: 2 }, { dmg: 36, cd: 1.5, len: 340, wid: 24, n: 4 },
+      { dmg: 16, cd: 1.7, len: 260, wid: 14, n: 1 }, { dmg: 22, cd: 1.7, len: 260, wid: 14, n: 1 }, { dmg: 22, cd: 1.6, len: 300, wid: 20, n: 1 },
+      { dmg: 24, cd: 1.6, len: 300, wid: 20, n: 2 }, { dmg: 31, cd: 1.45, len: 320, wid: 22, n: 2 }, { dmg: 36, cd: 1.35, len: 340, wid: 24, n: 4 },
     ],
     up: ['', '피해 +35%', '더 길고 굵게', '반대 방향으로도 발사', '피해 증가, 더 빠르게', '각성: 네 방향으로 뻗는다'],
   },
