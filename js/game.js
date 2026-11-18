@@ -108,7 +108,7 @@
 
   function spawn(S, type, x, y) {
     const d = G.ENEMIES[type], m = S.mod, min = S.t / 60;
-    const hpS = (1 + .18 * min + .065 * min * min) * m.eHp * S.depthHp * (1 + .12 * S.curse);
+    const hpS = (1 + .18 * min + .071 * min * min) * m.eHp * S.depthHp * (1 + .12 * S.curse);
     const e = {
       id: S.nextId++, type, x, y, r: d.r * m.eSize, hp: d.hp * hpS, maxHp: 0,
       speed: d.speed * m.eSpeed * S.depthSpd * (1 + .04 * S.curse) * (.9 + S.rng() * .2),
@@ -283,7 +283,7 @@
   }
 
   function bullet(S, x, y, dx, dy, spd, dmg, life) {
-    if (S.bullets.length < 260) S.bullets.push({ x, y, vx: dx * spd, vy: dy * spd, r: 6, dmg, life: life || 4.5, big: !life });
+    if (S.bullets.length < 260) S.bullets.push({ x, y, vx: dx * spd, vy: dy * spd, r: 6, dmg, life: life || 6, big: !life });
   }
 
   function ringShot(S, e, n, spd, off) {
