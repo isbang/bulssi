@@ -93,17 +93,14 @@
   /* 시작 화면은 #menu 위에 덮인다. z-index를 빼면 캐릭터 선택 화면이 비쳐 보인다. */
   #intro { z-index: 5; justify-content: space-between; overflow: hidden; background: var(--ink) url("assets/start.jpg") center 42% / cover no-repeat; }
   #intro::before { content: ""; position: absolute; inset: 0; max-width: none; background: linear-gradient(rgba(13,16,32,.5), rgba(13,16,32,0) 30%, rgba(13,16,32,0) 62%, rgba(13,16,32,.82)); pointer-events: none; }
-  #intro > * { position: relative; }
+  #intro > header, #intro > footer { position: relative; }
   #intro header { margin-top: 6vh; text-align: center; }
   #intro header img { width: min(60vw, 230px); height: auto; filter: drop-shadow(3px 4px 0 rgba(3,4,10,.55)); }
-  #intro header p { margin-top: 12px; color: var(--paper); text-shadow: 0 2px 6px rgba(3,4,10,.9); }
   #intro footer { margin-bottom: 4vh; text-align: center; }
   #intro footer .btn { width: 100%; }
-  #intro footer p { margin-top: 14px; font-size: 13px; color: var(--dim); }
   .title { margin-top: 5vh; }
   h1 { line-height: 0; }
   h1 img { width: min(54vw, 200px); height: auto; filter: drop-shadow(3px 4px 0 rgba(3,4,10,.55)); }
-  .title p { margin-top: 10px; color: var(--dim); }
   h2 { font-family: var(--disp); font-weight: 400; font-size: 32px; line-height: 1.2; }
   h2 + p { margin-top: 4px; color: var(--dim); font-size: 14px; }
   h3 { font-family: var(--disp); font-weight: 400; font-size: 20px; }
@@ -138,7 +135,6 @@
   .records div { flex: 1; padding-left: 12px; border-left: 1px solid var(--line); }
   .records dt { font-size: 11px; color: var(--dim); }
   .records dd { font-family: var(--disp); font-size: 24px; line-height: 1.3; font-variant-numeric: tabular-nums; }
-  .help { margin-top: 20px; font-size: 13px; color: var(--dim); }
 
   .cards { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
   .cards.locked { pointer-events: none; }
@@ -179,8 +175,17 @@
   .vols { margin-top: 18px; display: grid; grid-template-columns: 52px 1fr; gap: 10px 14px; align-items: center; }
   .vols label { display: grid; grid-template-columns: 4.5em 1fr 2.2em; align-items: center; gap: 12px; font-size: 14px; color: var(--dim); }
   .vols input { width: 100%; height: 28px; margin: 0; accent-color: var(--ember); touch-action: none; }
-  .vols .btn { grid-row: 1 / span 2; margin: 0; padding: 0; width: 52px; height: 52px; display: grid; place-items: center; color: var(--paper); }
-  .vols .btn.off { color: var(--rose); }
+  .spk { margin: 0; padding: 0; width: 52px; height: 52px; display: grid; place-items: center; color: var(--paper); }
+  .spk.off { color: var(--rose); }
+  .vols .spk { grid-row: 1 / span 2; }
+  .screen > .corner { position: absolute; z-index: 1; top: calc(env(safe-area-inset-top) + 14px); right: max(16px, env(safe-area-inset-right, 0px)); width: 46px; height: 46px; }
+  /* 소리 창은 어느 화면 위에서도 열린다. z-index를 시작 화면(5)보다 낮추면 시작 화면에서 열어도 보이지 않는다. */
+  .modal { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(3,4,10,.72); }
+  .dialog { width: 100%; max-width: 340px; padding: 22px 20px 20px; border-radius: 2px; background: var(--night) var(--grain); color: var(--paper); box-shadow: var(--cut); }
+  .dialog .spk { background-color: var(--ink); }
+  .dialog .vols { margin-top: 16px; }
+  .dialog .btn.primary { width: 100%; }
+  #pause { padding-top: calc(env(safe-area-inset-top) + 74px); }
   .vols label { grid-column: 2; }
   .vols b { font-weight: 400; text-align: right; font-variant-numeric: tabular-nums; color: var(--paper); }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -205,28 +210,33 @@
 </div>
 
 <div id="menu" class="screen">
+  <button class="btn spk corner" aria-haspopup="dialog"></button>
   <header class="title">
     <h1><img src="assets/logo.png" alt="불씨"></h1>
-    <p>밤은 길고, 불은 작다.</p>
   </header>
   <div id="chars" class="chars"></div>
   <div id="charInfo" class="info"></div>
   <div id="depthRow" class="depth hidden"><button id="depthDown" aria-label="한 단계 얕게">−</button><span id="depthLabel"></span><button id="depthUp" aria-label="한 단계 깊게">+</button></div>
   <button id="startBtn" class="btn primary">밤길 나서기</button>
   <dl id="records" class="records"></dl>
-  <p class="help">누른 채 끌면 움직인다. 공격은 저절로 나간다.</p>
-  <div class="vols"></div>
 </div>
 
 <div id="intro" class="screen">
+  <button class="btn spk corner" aria-haspopup="dialog"></button>
   <header>
     <img src="assets/logo.png" alt="불씨">
-    <p>밤은 길고, 불은 작다.</p>
   </header>
   <footer>
     <button id="introBtn" class="btn primary">게임 시작하기</button>
-    <p>긴 밤을 버텨 새벽을 맞이하세요</p>
   </footer>
+</div>
+
+<div id="sound" class="modal hidden" role="dialog" aria-label="소리 설정">
+  <div class="dialog">
+    <h2>소리</h2>
+    <div class="vols"></div>
+    <button id="soundClose" class="btn primary">닫기</button>
+  </div>
 </div>
 
 <div id="choice" class="screen dim hidden">
@@ -237,9 +247,9 @@
 </div>
 
 <div id="pause" class="screen dim top hidden">
+  <button class="btn spk corner" aria-haspopup="dialog"></button>
   <div id="pauseBody"></div>
   <button id="resumeBtn" class="btn primary">계속</button>
-  <div class="vols"></div>
   <button id="quitBtn" class="btn">그만두기</button>
 </div>
 

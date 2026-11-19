@@ -80,9 +80,9 @@
   function bgmFade() {
     if (!bgmGain || bgm.paused || !bgm.duration) return;
     const t = bgm.currentTime, k = Math.max(0, Math.min(1, t / .6, (bgm.duration - t) / 1.2));
-    bgmGain.gain.value = BGM_VOL * save.music * k * (paused && !volTouch ? .45 : 1);
+    bgmGain.gain.value = BGM_VOL * save.music * k * (paused && !soundOpen ? .45 : 1);
   }
-  let volTouch = false;
+  let soundOpen = false;
   const VOLS = [['music', '배경음악'], ['sfx', '효과음']];
   const SPK = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/>';
   const SPEAKER = [SPK + '<path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/></svg>', SPK + '<path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>'];
@@ -95,14 +95,13 @@
   function syncVols() {
     document.querySelectorAll('.vols input').forEach(i => { const v = Math.round(save[i.dataset.k] * 100); i.value = v; i.nextElementSibling.textContent = v ? v : '끔'; });
     const muted = !save.music && !save.sfx;
-    document.querySelectorAll('.vols button').forEach(b => { b.innerHTML = SPEAKER[+muted]; b.classList.toggle('off', muted); b.setAttribute('aria-label', muted ? '소리 켜기' : '음소거'); });
+    document.querySelectorAll('.spk').forEach(b => { b.innerHTML = SPEAKER[+muted]; b.classList.toggle('off', muted); b.setAttribute('aria-label', muted ? '소리 켜기' : '음소거'); });
   }
   document.querySelectorAll('.vols').forEach(el => {
     el.innerHTML = VOLS.map(([k, n]) => `<label><span>${n}</span><input type="range" min="0" max="100" step="5" data-k="${k}" aria-label="${n} 음량"><b></b></label>`).join('');
-    el.insertAdjacentHTML('afterbegin', '<button class="btn"></button>');
-    el.querySelector('button').onclick = toggleMute;
-    el.addEventListener('input', e => { save[e.target.dataset.k] = e.target.value / 100; volTouch = true; syncVols(); initAudio(); });
-    el.addEventListener('change', e => { volTouch = false; persist(); if (e.target.dataset.k === 'sfx') sfx('chest'); });
+    el.insertAdjacentHTML('afterbegin', '<button class="btn spk"></button>');
+    el.addEventListener('input', e => { save[e.target.dataset.k] = e.target.value / 100; syncVols(); initAudio(); });
+    el.addEventListener('change', e => { persist(); if (e.target.dataset.k === 'sfx') sfx('chest'); });
   });
 
   // ── 화면 크기·입력 ──
@@ -189,6 +188,11 @@
     toast(`<small>오늘 밤의 징조</small><b>${S.omen.name}</b>${S.omen.desc}`, 5);
   }
   $('startBtn').onclick = startRun;
+  function openSound(on) { soundOpen = on; show('sound', on); if (on) initAudio(); }
+  document.querySelectorAll('.spk').forEach(b => { b.onclick = b.closest('.vols') ? toggleMute : () => openSound(true); });
+  $('soundClose').onclick = () => openSound(false);
+  $('sound').onclick = e => { if (e.target === $('sound')) openSound(false); };
+  syncVols();
   $('introBtn').onclick = () => { initAudio(); show('intro', false); };
   if (BOT) show('intro', false);
   $('retryBtn').onclick = startRun;
