@@ -273,6 +273,14 @@
     p.hp -= Math.max(1, dmg * S.st.taken - S.st.armor);
     p.iframes = .45; S.shake = .25; S.hurtFlash = .35;
     ev(S, 'sfx', 'hurt');
+    // 맞는 순간 붙은 적을 밀쳐낸다. 이 밀침을 빼면 플레이어보다 빠른 적이 계속 겹쳐 있어 걸어서 빠져나올 수 없다.
+    near(S, p.x, p.y, 44, e => {
+      if (e.boss) return;
+      let dx = e.x - p.x, dy = e.y - p.y, l = Math.hypot(dx, dy);
+      if (l < 1) { const a = S.rng() * 6.283; dx = Math.cos(a); dy = Math.sin(a); l = 1; }
+      const f = e.elite ? 110 : 280;
+      e.kx += dx / l * f; e.ky += dy / l * f; e.stun = Math.max(e.stun || 0, .35);
+    });
     if (S.has.thorns) S.zones.push({ k: 'blast', x: p.x, y: p.y, r: 95, dmg: 25 + S.t / 20, delay: 0, kb: 260, src: 'relic' });
     if (p.hp > 0) return;
     if (S.has.second && !S.revived) {
