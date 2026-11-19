@@ -176,12 +176,12 @@
   .pips i { width: 8px; height: 8px; border: 1px solid var(--ink); }
   .pips i.on { background: var(--ink); }
   .pips.max i { border-color: #b0500f; background: #b0500f; }
-  .vols { margin-top: 18px; display: grid; gap: 10px; }
+  .vols { margin-top: 18px; display: grid; grid-template-columns: 52px 1fr; gap: 10px 14px; align-items: center; }
   .vols label { display: grid; grid-template-columns: 4.5em 1fr 2.2em; align-items: center; gap: 12px; font-size: 14px; color: var(--dim); }
   .vols input { width: 100%; height: 28px; margin: 0; accent-color: var(--ember); touch-action: none; }
-  .vols .btn { margin-top: 2px; padding: 10px; font-size: 14px; color: var(--dim); }
-  .vols.muted .btn { background-color: var(--ember); color: #1d0e02; font-weight: 700; }
-  .vols.muted label { opacity: .45; }
+  .vols .btn { grid-row: 1 / span 2; margin: 0; padding: 0; width: 52px; height: 52px; display: grid; place-items: center; color: var(--paper); }
+  .vols .btn.off { color: var(--rose); }
+  .vols label { grid-column: 2; }
   .vols b { font-weight: 400; text-align: right; font-variant-numeric: tabular-nums; color: var(--paper); }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   #over .records { margin-top: 22px; }
