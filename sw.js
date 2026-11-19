@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'bulssi-v18';
+const CACHE = 'bulssi-v19';
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'js/data.js', 'js/game.js', 'js/render.js', 'js/ui.js', 'icons/icon-192.png', 'icons/icon-512.png', 'assets/logo.png', 'assets/start.jpg',
@@ -16,11 +16,20 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 
-// 네트워크 우선으로 둔다. 캐시 우선으로 바꾸면 배포한 새 버전이 설치된 앱에 반영되지 않는다.
+// 문서와 스크립트는 네트워크 우선으로 둔다. 캐시 우선으로 바꾸면 배포한 새 버전이 설치된 앱에 반영되지 않는다.
 self.addEventListener('fetch', e => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || (url.origin !== location.origin && !FONT_HOSTS.includes(url.hostname))) return;
+  // 그림은 캐시에서 바로 준다. 네트워크부터 다녀오게 하면 설치 앱에서 그림이 늦게 떠 대체 도형이 먼저 보인다.
+  // 그림 파일을 바꿀 때는 CACHE 이름을 올린다. 올리지 않으면 설치 앱에 예전 그림이 남는다.
+  if (url.origin === location.origin && /\/(assets|icons)\//.test(url.pathname)) {
+    e.respondWith(caches.match(req, { ignoreSearch: true }).then(hit => hit || fetch(req).then(res => {
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+      return res;
+    })));
+    return;
+  }
   e.respondWith(
     fetch(req)
       .then(res => {

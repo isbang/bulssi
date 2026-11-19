@@ -486,7 +486,8 @@
     ctx.globalAlpha = 1;
   }
 
-  ['breath-1', 'breath-2', 'breath-3', 'burst-1', 'burst-2', 'burst-3', 'burstr-1', 'burstr-2', 'burstr-3', 'spark', 'crescent', 'mine', 'star', 'starr', 'impact', 'shot', 'burr', 'gem-1', 'gem-2', 'gem-3', 'drop', 'beam', 'bolt', 'fire'].forEach(n => spr('fx/' + n));
+  // assets/ 아래 PNG 전부를 시작할 때 불러 둔다. 그림을 추가하고 여기에 넣지 않으면 처음 등장하는 순간 대체 도형이 먼저 보인다.
+  ['chars/bolt', 'chars/candle', 'chars/coal', 'chars/crescent', 'chars/ember', 'chars/firefly', 'chars/kiln', 'chars/meteor', 'enemies/brute', 'enemies/charger', 'enemies/maw', 'enemies/mite', 'enemies/runner', 'enemies/shade', 'enemies/spitter', 'enemies/splitter', 'enemies/swarm', 'enemies/warden', 'enemies/weaver', 'enemies/wisp', 'items/chest', 'items/heal', 'items/lantern', 'items/magnet', 'items/shrine-gamble', 'items/shrine-heal', 'items/shrine-pact', 'items/shrine-wisdom', 'fx/beam', 'fx/bolt', 'fx/breath-1', 'fx/breath-2', 'fx/breath-3', 'fx/burr', 'fx/burst-1', 'fx/burst-2', 'fx/burst-3', 'fx/burstr-1', 'fx/burstr-2', 'fx/burstr-3', 'fx/crescent', 'fx/drop', 'fx/fire', 'fx/gem-1', 'fx/gem-2', 'fx/gem-3', 'fx/impact', 'fx/mine', 'fx/shot', 'fx/spark', 'fx/star', 'fx/starr', 'icons/h-rest', 'icons/p-area', 'icons/p-edge', 'icons/p-haste', 'icons/p-magnet', 'icons/p-might', 'icons/p-shell', 'icons/p-speed', 'icons/p-twin', 'icons/p-warmth', 'icons/p-wisdom', 'icons/r-blast', 'icons/r-clover', 'icons/r-collector', 'icons/r-dash', 'icons/r-frost', 'icons/r-glass', 'icons/r-greed', 'icons/r-hungry', 'icons/r-rage', 'icons/r-second', 'icons/r-shadow', 'icons/r-still', 'icons/r-thorns', 'icons/r-time', 'icons/w-boomerang', 'icons/w-chain', 'icons/w-lance', 'icons/w-mine', 'icons/w-nova', 'icons/w-orbit', 'icons/w-rain', 'icons/w-spark'].forEach(spr);
   function effects(ctx, S) {
     ctx.lineJoin = 'miter'; ctx.lineCap = 'butt'; ctx.miterLimit = 6;
     for (const f of S.fx) {
