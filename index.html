@@ -185,6 +185,7 @@
   .dialog .spk { background-color: var(--ink); }
   .dialog .vols { margin-top: 16px; }
   .dialog .btn.primary { width: 100%; }
+  .dialog ol { margin: 14px 0 0; padding-left: 1.4em; font-size: 15px; line-height: 1.7; }
   #pause { padding-top: calc(env(safe-area-inset-top) + 74px); }
   .vols label { grid-column: 2; }
   .vols b { font-weight: 400; text-align: right; font-variant-numeric: tabular-nums; color: var(--paper); }
@@ -228,6 +229,7 @@
   </header>
   <footer>
     <button id="introBtn" class="btn primary">게임 시작하기</button>
+    <button id="installBtn" class="btn hidden">앱 설치하기</button>
   </footer>
 </div>
 
@@ -236,6 +238,14 @@
     <h2>소리</h2>
     <div class="vols"></div>
     <button id="soundClose" class="btn primary">닫기</button>
+  </div>
+</div>
+
+<div id="install" class="modal hidden" role="dialog" aria-label="앱 설치 방법">
+  <div class="dialog">
+    <h2>앱 설치</h2>
+    <ol id="installSteps"></ol>
+    <button id="installClose" class="btn primary">닫기</button>
   </div>
 </div>
 

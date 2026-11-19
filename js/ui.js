@@ -193,6 +193,23 @@
   $('soundClose').onclick = () => openSound(false);
   $('sound').onclick = e => { if (e.target === $('sound')) openSound(false); };
   syncVols();
+  // 설치 창은 브라우저가 beforeinstallprompt로 넘겨준 이벤트로만 띄울 수 있다. iOS 사파리는 이 이벤트를 주지 않아 방법 안내로 대신한다.
+  let installEvt = null;
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  show('installBtn', !standalone && !BOT);
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+  window.addEventListener('appinstalled', () => show('installBtn', false));
+  $('installBtn').onclick = async () => {
+    if (installEvt) { const e = installEvt; installEvt = null; e.prompt(); const r = await e.userChoice; if (r.outcome === 'accepted') show('installBtn', false); return; }
+    const steps = ios
+      ? ['사파리에서 이 페이지를 엽니다. 카카오톡 같은 앱 안에서 열었다면 먼저 사파리로 엽니다.', '화면 아래의 공유 버튼(네모에서 화살표가 올라가는 모양)을 누릅니다.', '목록에서 "홈 화면에 추가"를 고릅니다.', '오른쪽 위의 "추가"를 누릅니다.']
+      : ['크롬이나 엣지에서 이 페이지를 엽니다.', '브라우저 메뉴(⋮)를 엽니다.', '"앱 설치" 또는 "홈 화면에 추가"를 고릅니다.'];
+    $('installSteps').innerHTML = steps.map(s => `<li>${s}</li>`).join('');
+    show('install', true);
+  };
+  $('installClose').onclick = () => show('install', false);
+  $('install').onclick = e => { if (e.target === $('install')) show('install', false); };
   $('introBtn').onclick = () => { initAudio(); show('intro', false); };
   if (BOT) show('intro', false);
   $('retryBtn').onclick = startRun;
