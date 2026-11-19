@@ -8,7 +8,7 @@
   const SAVE_KEY = 'bulssi-save-v1';
   const MAX_DEPTH = 5;
 
-  let save = { runs: 0, wins: 0, bestTime: 0, kills: 0, bossKills: 0, maxDepth: 0, music: .6, sfx: .8, char: 'ember', depth: 0 };
+  let save = { runs: 0, wins: 0, bestTime: 0, kills: 0, bossKills: 0, maxDepth: 0, music: .6, sfx: .8, mute: false, char: 'ember', depth: 0 };
   try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); if (save.sound === false) save.music = save.sfx = 0; delete save.sound; } catch (e) { /* 저장소를 못 쓰는 환경에서는 기록 없이 진행 */ }
   const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* 위와 동일 */ } };
 
@@ -48,7 +48,7 @@
     dead: [1, () => [392, 330, 262, 196].forEach((f, i) => tone(f, .35, 'triangle', .1, 0, i * .16))],
   };
   function sfx(n) {
-    if (!save.sfx || !ac || !SFX[n]) return;
+    if (save.mute || !save.sfx || !ac || !SFX[n]) return;
     if (V.time - (sfxLast[n] || -9) < SFX[n][0]) return;
     sfxLast[n] = V.time;
     SFX[n][1]();
@@ -74,7 +74,7 @@
     if (!bgm) return;
     // 음량은 GainNode로 조절한다. iOS는 audio.volume 설정을 무시하므로 그쪽으로 바꾸면 아이폰에서 최대 음량으로 나온다.
     if (ac && !bgmGain) { bgmGain = ac.createGain(); bgmGain.gain.value = 0; ac.createMediaElementSource(bgm).connect(bgmGain).connect(ac.destination); }
-    if (save.music > 0 && ac && !document.hidden) { if (bgm.paused) bgm.play().catch(() => { /* 사용자 조작 전에는 재생이 막힌다. 다음 조작에서 다시 시도 */ }); }
+    if (!save.mute && save.music > 0 && ac && !document.hidden) { if (bgm.paused) bgm.play().catch(() => { /* 사용자 조작 전에는 재생이 막힌다. 다음 조작에서 다시 시도 */ }); }
     else if (!bgm.paused) bgm.pause();
   }
   function bgmFade() {
@@ -86,10 +86,13 @@
   const VOLS = [['music', '배경음악'], ['sfx', '효과음']];
   function syncVols() {
     document.querySelectorAll('.vols input').forEach(i => { const v = Math.round(save[i.dataset.k] * 100); i.value = v; i.nextElementSibling.textContent = v ? v : '끔'; });
+    document.querySelectorAll('.vols').forEach(el => el.classList.toggle('muted', save.mute));
+    document.querySelectorAll('.vols button').forEach(b => { b.textContent = save.mute ? '음소거 중 · 눌러서 켜기' : '음소거'; b.setAttribute('aria-pressed', save.mute); });
   }
   document.querySelectorAll('.vols').forEach(el => {
-    el.innerHTML = VOLS.map(([k, n]) => `<label><span>${n}</span><input type="range" min="0" max="100" step="5" data-k="${k}" aria-label="${n} 음량"><b></b></label>`).join('');
-    el.addEventListener('input', e => { save[e.target.dataset.k] = e.target.value / 100; volTouch = true; syncVols(); initAudio(); });
+    el.innerHTML = VOLS.map(([k, n]) => `<label><span>${n}</span><input type="range" min="0" max="100" step="5" data-k="${k}" aria-label="${n} 음량"><b></b></label>`).join('') + '<button class="btn"></button>';
+    el.querySelector('button').onclick = () => { save.mute = !save.mute; persist(); syncVols(); initAudio(); };
+    el.addEventListener('input', e => { save[e.target.dataset.k] = e.target.value / 100; save.mute = false; volTouch = true; syncVols(); initAudio(); });
     el.addEventListener('change', e => { volTouch = false; persist(); if (e.target.dataset.k === 'sfx') sfx('chest'); });
   });
 
