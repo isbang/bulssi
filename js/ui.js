@@ -8,8 +8,8 @@
   const SAVE_KEY = 'bulssi-save-v1';
   const MAX_DEPTH = 5;
 
-  let save = { runs: 0, wins: 0, bestTime: 0, kills: 0, bossKills: 0, maxDepth: 0, sound: true, char: 'ember', depth: 0 };
-  try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) { /* 저장소를 못 쓰는 환경에서는 기록 없이 진행 */ }
+  let save = { runs: 0, wins: 0, bestTime: 0, kills: 0, bossKills: 0, maxDepth: 0, music: .6, sfx: .8, char: 'ember', depth: 0 };
+  try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); if (save.sound === false) save.music = save.sfx = 0; delete save.sound; } catch (e) { /* 저장소를 못 쓰는 환경에서는 기록 없이 진행 */ }
   const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* 위와 동일 */ } };
 
   let S = null, mode = 'menu', paused = false, choiceOpen = false, last = 0, toastT = 0;
@@ -23,7 +23,7 @@
     : `<span class="seal ${kind} ${cls || ''}">${glyph}</span>`;
 
   // ── 소리 ──
-  let ac = null;
+  let ac = null, sfxOut = null;
   const sfxLast = {};
   let gemPitch = 0;
   function tone(f, d, type, vol, slide, delay) {
@@ -31,7 +31,7 @@
     o.type = type; o.frequency.setValueAtTime(f, t);
     if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + d);
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
-    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d + .02);
+    o.connect(g).connect(sfxOut); o.start(t); o.stop(t + d + .02);
   }
   const SFX = {
     shoot: [.09, () => tone(520, .06, 'triangle', .025, -200)],
@@ -48,18 +48,50 @@
     dead: [1, () => [392, 330, 262, 196].forEach((f, i) => tone(f, .35, 'triangle', .1, 0, i * .16))],
   };
   function sfx(n) {
-    if (!save.sound || !ac || !SFX[n]) return;
+    if (!save.sfx || !ac || !SFX[n]) return;
     if (V.time - (sfxLast[n] || -9) < SFX[n][0]) return;
     sfxLast[n] = V.time;
     SFX[n][1]();
   }
   function initAudio() {
-    if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (AC) ac = new AC();
+    if (ac) { if (ac.state === 'suspended') ac.resume(); }
+    else {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) { ac = new AC(); sfxOut = ac.createGain(); sfxOut.connect(ac.destination); }
+    }
+    if (sfxOut) sfxOut.gain.value = save.sfx * 1.25;
+    syncBgm();
   }
-  function soundLabel() { $('soundBtn').textContent = $('pauseSoundBtn').textContent = save.sound ? '소리 켜짐' : '소리 꺼짐'; }
-  function toggleSound() { save.sound = !save.sound; persist(); soundLabel(); initAudio(); }
+
+  const BGM_VOL = .5;
+  let bgm = null, bgmGain = null;
+  // 음원은 fetch로 통째로 받아 blob 주소로 건다. audio.src에 파일 주소를 직접 걸면 사파리가 Range 요청을 보내는데,
+  // 서비스 워커가 캐시에서 주는 응답은 Range를 처리하지 못해 설치 앱에서 재생이 실패한다.
+  if (!BOT) fetch('assets/bgm.mp3').then(r => r.ok ? r.blob() : Promise.reject()).then(b => {
+    bgm = new Audio(URL.createObjectURL(b)); bgm.loop = true; syncBgm();
+  }).catch(() => { /* 음원을 못 받으면 효과음만으로 동작 */ });
+  function syncBgm() {
+    if (!bgm) return;
+    // 음량은 GainNode로 조절한다. iOS는 audio.volume 설정을 무시하므로 그쪽으로 바꾸면 아이폰에서 최대 음량으로 나온다.
+    if (ac && !bgmGain) { bgmGain = ac.createGain(); bgmGain.gain.value = 0; ac.createMediaElementSource(bgm).connect(bgmGain).connect(ac.destination); }
+    if (save.music > 0 && ac && !document.hidden) { if (bgm.paused) bgm.play().catch(() => { /* 사용자 조작 전에는 재생이 막힌다. 다음 조작에서 다시 시도 */ }); }
+    else if (!bgm.paused) bgm.pause();
+  }
+  function bgmFade() {
+    if (!bgmGain || bgm.paused || !bgm.duration) return;
+    const t = bgm.currentTime, k = Math.max(0, Math.min(1, t / .6, (bgm.duration - t) / 1.2));
+    bgmGain.gain.value = BGM_VOL * save.music * k * (paused && !volTouch ? .45 : 1);
+  }
+  let volTouch = false;
+  const VOLS = [['music', '배경음악'], ['sfx', '효과음']];
+  function syncVols() {
+    document.querySelectorAll('.vols input').forEach(i => { const v = Math.round(save[i.dataset.k] * 100); i.value = v; i.nextElementSibling.textContent = v ? v : '끔'; });
+  }
+  document.querySelectorAll('.vols').forEach(el => {
+    el.innerHTML = VOLS.map(([k, n]) => `<label><span>${n}</span><input type="range" min="0" max="100" step="5" data-k="${k}" aria-label="${n} 음량"><b></b></label>`).join('');
+    el.addEventListener('input', e => { save[e.target.dataset.k] = e.target.value / 100; volTouch = true; syncVols(); initAudio(); });
+    el.addEventListener('change', e => { volTouch = false; persist(); if (e.target.dataset.k === 'sfx') sfx('chest'); });
+  });
 
   // ── 화면 크기·입력 ──
   function resize() {
@@ -89,7 +121,8 @@
   window.addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Escape' && mode === 'play') paused ? resume() : pause(); });
   window.addEventListener('keyup', e => { keys[e.code] = false; });
   document.addEventListener('contextmenu', e => e.preventDefault());
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); syncBgm(); });
+  document.addEventListener('pointerdown', () => { if (ac && bgm && bgm.paused) initAudio(); });
 
   function readInput() {
     const j = V.joy;
@@ -121,12 +154,10 @@
     save.depth = Math.min(save.depth, save.maxDepth);
     $('depthLabel').textContent = save.depth ? `밤의 깊이 ${save.depth} · 적이 더 강하다` : '밤의 깊이 0';
     $('records').innerHTML = `<div><dt>최장 기록</dt><dd>${fmt(save.bestTime)}</dd></div><div><dt>맞은 새벽</dt><dd>${save.wins}</dd></div><div><dt>지샌 밤</dt><dd>${save.runs}</dd></div>`;
-    soundLabel();
+    syncVols();
   }
   $('depthDown').onclick = () => { save.depth = Math.max(0, save.depth - 1); renderMenu(); };
   $('depthUp').onclick = () => { save.depth = Math.min(save.maxDepth, save.depth + 1); renderMenu(); };
-  $('soundBtn').onclick = toggleSound;
-  $('pauseSoundBtn').onclick = toggleSound;
 
   function toMenu() {
     mode = 'menu'; S = null; paused = false; choiceOpen = false;
@@ -262,6 +293,7 @@
       G.render(ctx, S, V);
       hud();
     } else G.renderMenu(ctx, V);
+    bgmFade();
     requestAnimationFrame(frame);
   }
 
@@ -270,6 +302,7 @@
   }
 
   G.state = () => S;
+  G.audio = () => ({ bgm, gain: bgmGain && bgmGain.gain.value, ctx: ac && ac.state });
   resize();
   toMenu();
   requestAnimationFrame(frame);
